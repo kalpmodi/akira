@@ -1,0 +1,71 @@
+name: Finding Submission
+description: Found a real bug using Akira? Submit it for FINDINGS.md
+title: "[finding] "
+labels: ["finding"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Found a real vulnerability using Akira's skill chain? Submit it here after responsible disclosure.
+        We'll add it to FINDINGS.md with attribution. Anonymous is fine. Program name optional.
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      options:
+        - Critical
+        - High
+        - Medium
+    validations:
+      required: true
+  - type: dropdown
+    id: type
+    attributes:
+      label: Vulnerability type
+      options:
+        - SSRF
+        - XSS
+        - SQL Injection
+        - OAuth / Account Takeover
+        - Race Condition
+        - JWT / Auth Bypass
+        - Cloud Misconfiguration (AWS/GCP/Azure)
+        - Active Directory
+        - Deserialization
+        - IDOR
+        - Open Redirect
+        - RCE
+        - CVE / Zero-Day
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: skill-chain
+    attributes:
+      label: Which Akira skills were used?
+      placeholder: "/recon -> /exploit -> /cloud-audit"
+    validations:
+      required: true
+  - type: textarea
+    id: summary
+    attributes:
+      label: Finding summary (anonymized)
+      description: Brief description of what you found and how. No target name needed.
+      placeholder: "Found SSRF in image proxy endpoint, used cloud-audit to chain to IAM credential extraction..."
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: Platform (optional)
+      placeholder: "HackerOne / Bugcrowd / Private / CVE"
+  - type: input
+    id: bounty
+    attributes:
+      label: Bounty amount (optional, approximate is fine)
+      placeholder: "$1,500"
+  - type: input
+    id: disclosure
+    attributes:
+      label: Public disclosure link (optional)
+      placeholder: "https://hackerone.com/reports/..."

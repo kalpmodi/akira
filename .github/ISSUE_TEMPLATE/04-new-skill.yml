@@ -1,0 +1,42 @@
+name: New Skill Request
+description: Request a new attack module / skill for Akira
+title: "[new-skill] "
+labels: ["new-skill"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Want a new skill that doesn't exist yet? Check the roadmap in README first - it may already be planned.
+        If it's on the roadmap, +1 the existing issue to help prioritize. Otherwise, describe it here.
+  - type: input
+    id: skill-name
+    attributes:
+      label: Proposed skill name
+      placeholder: "graphql / mobile / deserialization / ..."
+    validations:
+      required: true
+  - type: textarea
+    id: attack-surface
+    attributes:
+      label: Attack surface and key techniques
+      description: What does this skill test? What are the main attack vectors?
+      placeholder: |
+        GraphQL:
+        - Introspection abuse
+        - Batching to bypass rate limits
+        - Field-level authorization bypass
+        - Injection via resolvers
+    validations:
+      required: true
+  - type: textarea
+    id: tools
+    attributes:
+      label: Tools needed
+      placeholder: "graphqlmap, clairvoyance, inql..."
+  - type: checkboxes
+    id: willing-to-contribute
+    attributes:
+      label: Contribution
+      options:
+        - label: I am willing to write this skill (open a PR)
+        - label: I can provide real finding examples for this attack surface

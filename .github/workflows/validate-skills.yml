@@ -1,0 +1,68 @@
+name: Validate Skills
+
+on:
+  push:
+    paths:
+      - 'skills/**'
+  pull_request:
+    paths:
+      - 'skills/**'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    name: Validate skill file structure
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check all skills have SKILL.md
+        run: |
+          echo "Checking skill files..."
+          MISSING=0
+          for dir in skills/*/; do
+            skill=$(basename "$dir")
+            if [ ! -f "$dir/SKILL.md" ]; then
+              echo "MISSING: $skill/SKILL.md"
+              MISSING=$((MISSING + 1))
+            else
+              echo "OK: $skill/SKILL.md"
+            fi
+          done
+          if [ $MISSING -gt 0 ]; then
+            echo "$MISSING skill(s) missing SKILL.md"
+            exit 1
+          fi
+          echo "All skills valid."
+
+      - name: Check SKILL.md frontmatter
+        run: |
+          echo "Checking frontmatter..."
+          INVALID=0
+          for skill_file in skills/*/SKILL.md; do
+            # Check for --- frontmatter delimiter
+            if ! head -1 "$skill_file" | grep -q "^---"; then
+              echo "MISSING FRONTMATTER: $skill_file"
+              INVALID=$((INVALID + 1))
+            fi
+            # Check for name field
+            if ! grep -q "^name:" "$skill_file"; then
+              echo "MISSING name: field in $skill_file"
+              INVALID=$((INVALID + 1))
+            fi
+            # Check for description field
+            if ! grep -q "^description:" "$skill_file"; then
+              echo "MISSING description: field in $skill_file"
+              INVALID=$((INVALID + 1))
+            fi
+          done
+          if [ $INVALID -gt 0 ]; then
+            echo "$INVALID issue(s) found"
+            exit 1
+          fi
+          echo "All frontmatter valid."
+
+      - name: Count skills
+        run: |
+          COUNT=$(ls -d skills/*/ | wc -l | tr -d ' ')
+          echo "Total skills: $COUNT"

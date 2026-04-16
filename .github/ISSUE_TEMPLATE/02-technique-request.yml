@@ -1,0 +1,48 @@
+name: Technique Request
+description: A new attack technique, tool, or vector that should be in Akira
+title: "[technique] "
+labels: ["technique-request"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Security moves fast. If you know a technique that Akira should cover, add it here.
+  - type: dropdown
+    id: skill
+    attributes:
+      label: Which skill should this go into?
+      options:
+        - plan-engagement
+        - recon
+        - secrets
+        - exploit
+        - zerodayhunt
+        - triage
+        - report
+        - ad-attacks
+        - oauth-attacks
+        - race-conditions
+        - cloud-audit
+        - ctf
+        - new skill (describe below)
+    validations:
+      required: true
+  - type: textarea
+    id: technique
+    attributes:
+      label: Technique description
+      description: What is the attack vector? What does it exploit? What evidence does it produce?
+      placeholder: "HTTP/2 rapid reset (CVE-2023-44487) allows rate limit bypass by..."
+    validations:
+      required: true
+  - type: input
+    id: reference
+    attributes:
+      label: Reference (optional)
+      description: Link to writeup, CVE, paper, or public disclosure
+      placeholder: "https://..."
+  - type: textarea
+    id: tools
+    attributes:
+      label: Tools involved (optional)
+      description: What tools would run this technique? Already in bootstrap.sh?

@@ -1,0 +1,42 @@
+---
+description: Akira pentest skill suite - activates for security testing, bug bounty, and CTF tasks
+alwaysApply: false
+globs: []
+---
+
+# Akira Pentest Skills
+
+When the user is working on security testing, bug bounty, penetration testing, or CTF challenges,
+use the relevant Akira skill by reading and following the instructions in the skill file.
+
+## Skill Map
+
+| User asks about | Read and follow |
+|---|---|
+| Starting a pentest, new target, scope | `skills/plan-engagement/SKILL.md` |
+| Recon, subdomains, live hosts, phase 1 | `skills/recon/SKILL.md` |
+| Secrets, API keys, tokens, phase 2 | `skills/secrets/SKILL.md` |
+| XSS, SQLi, nuclei, exploitation, phase 3 | `skills/exploit/SKILL.md` |
+| Zero-days, chain attacks, JWT, WAF bypass | `skills/zerodayhunt/SKILL.md` |
+| Aggregating findings, triage, severity | `skills/triage/SKILL.md` |
+| Writing report, generating report | `skills/report/SKILL.md` |
+| Active Directory, BloodHound, Kerberoast | `skills/ad-attacks/SKILL.md` |
+| OAuth, OIDC, SSO, account takeover | `skills/oauth-attacks/SKILL.md` |
+| Race conditions, double-spend, TOCTOU | `skills/race-conditions/SKILL.md` |
+| AWS, GCP, Azure, Kubernetes | `skills/cloud-audit/SKILL.md` |
+| CTF, HackTheBox, TryHackMe, pwn | `skills/ctf/SKILL.md` |
+
+## Phase Order
+
+```
+plan-engagement -> recon -> secrets -> exploit -> zerodayhunt -> triage -> report
+```
+
+## Evidence Rule
+
+Never claim a finding without quoting the exact HTTP response proving it.
+Empty body or WAF-intercepted response is not evidence of a vulnerability.
+
+## Authorization
+
+Only on authorized targets: bug bounty programs, authorized pentests, CTF competitions.

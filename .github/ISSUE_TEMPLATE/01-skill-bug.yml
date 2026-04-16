@@ -1,0 +1,48 @@
+name: Skill Bug
+description: A skill gives wrong output, hallucinates, or produces a false positive
+title: "[skill-bug] "
+labels: ["skill-bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Found a skill that claims a finding it shouldn't, misses something obvious, or produces bad output? Report it here.
+  - type: dropdown
+    id: skill
+    attributes:
+      label: Which skill?
+      options:
+        - plan-engagement
+        - recon
+        - secrets
+        - exploit
+        - zerodayhunt
+        - triage
+        - report
+        - ad-attacks
+        - oauth-attacks
+        - race-conditions
+        - cloud-audit
+        - ctf
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What went wrong?
+      description: What did the skill output that was wrong or missing?
+      placeholder: "The skill claimed X but the evidence showed Y..."
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What should have happened?
+      placeholder: "It should have downgraded to POTENTIAL because..."
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context (optional)
+      description: Target type, phase output, any relevant details (anonymize if needed)

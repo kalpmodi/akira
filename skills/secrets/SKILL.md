@@ -1,0 +1,97 @@
+---
+name: secrets
+description: Use when hunting for secrets, API keys, tokens, or credentials on a pentest target, running phase 2 of an engagement, scanning JS files for hardcoded secrets, or running trufflehog/gitleaks. Also use when the user says "run secrets", "hunt secrets", or "phase 2".
+---
+
+# Secrets Hunting Phase
+
+## Overview
+Runs secrets hunting toolkit with recon-provided scope (if available) and summarizes verified findings into `interesting_secrets.md`.
+
+## Steps
+
+1. **Get target** from user if not provided.
+
+2. **Check for recon scope:**
+   ```bash
+   ls ~/pentest-toolkit/results/<target>/recon/urls.txt 2>/dev/null
+   ls ~/pentest-toolkit/results/<target>/recon/live-hosts.txt 2>/dev/null
+   ```
+   If missing: warn "Running without recon scope — results may be noisy" and proceed.
+
+3. **Run secrets scan with scope:**
+   ```bash
+   TARGET_URLS=~/pentest-toolkit/results/<target>/recon/urls.txt \
+   TARGET_HOSTS=~/pentest-toolkit/results/<target>/recon/live-hosts.txt \
+   ~/pentest-toolkit/secrets/secrets.sh <target>
+   ```
+   If exit code is non-zero: stop, invoke `superpowers:systematic-debugging`.
+
+4. **Check for empty output:**
+   ```bash
+   wc -c ~/pentest-toolkit/results/<target>/secrets/trufflehog.json 2>/dev/null
+   ```
+   If empty or missing: write `interesting_secrets.md` with `## Status` = `no-findings`.
+
+5. **Read and summarize — focus on verified secrets only:**
+   ```bash
+   cat ~/pentest-toolkit/results/<target>/secrets/trufflehog.json
+   cat ~/pentest-toolkit/results/<target>/secrets/sensitive-urls.txt
+   ```
+   High-confidence = trufflehog `--only-verified` results, OR URL patterns with 2+ credential-like params co-present.
+
+6. **Write `interesting_secrets.md`** to `~/pentest-toolkit/results/<target>/interesting_secrets.md`:
+
+```markdown
+## Status
+findings-present
+
+## Summary
+<one paragraph: how many verified secrets, what types, where found>
+
+## Key Findings
+- [CONFIRMED] <secret type> in <location> — <brief description>
+- [POTENTIAL] <pattern> in <url> — unverified credential-like parameter
+
+## Raw Evidence References
+- ~/pentest-toolkit/results/<target>/secrets/trufflehog.json
+- ~/pentest-toolkit/results/<target>/secrets/sensitive-urls.txt
+```
+
+7. **GitHub dorking for target secrets:**
+   ```bash
+   # Search GitHub for exposed secrets (open in browser or use gh CLI if available):
+   # site:github.com "<target>" password
+   # site:github.com "<target>" api_key
+   # site:github.com "<target>" secret
+   # site:github.com "<target>" token
+   # site:github.com "<target>" DB_PASSWORD
+
+   # If gh CLI available:
+   gh search code "<target> password" --language='' 2>/dev/null | head -20
+   gh search code "<target> api_key OR secret OR token" 2>/dev/null | head -20
+   ```
+
+8. **API spec / Postman collection hunting:**
+   ```bash
+   # Swagger/OpenAPI docs (often exposed in prod):
+   for path in /swagger.json /swagger/v1/swagger.json /api-docs /api/swagger.json \
+               /v1/api-docs /openapi.json /docs/swagger.json /swagger-ui.html \
+               /.well-known/openapi.json /api/v1/swagger.json /api/v2/swagger.json; do
+     curl -sk "https://<target>$path" -o /tmp/swagger_test.json 2>/dev/null
+     if python3 -c "import json,sys; d=json.load(open('/tmp/swagger_test.json')); print('FOUND' if 'paths' in d or 'openapi' in d or 'swagger' in d else 'NO')" 2>/dev/null | grep -q FOUND; then
+       echo "API SPEC FOUND at: https://<target>$path"
+       cp /tmp/swagger_test.json ~/pentest-toolkit/results/<target>/secrets/api_spec.json
+     fi
+   done
+
+   # Postman collection leaks (check GitHub search above for .postman_collection.json)
+   # Also check: /api/postman, /postman-collection.json, /collection.json
+   ```
+   If API spec found: extract all endpoints and add to intel for exploit phase.
+
+9. **Update session.json** with any found credentials:
+   - Add verified secrets to `intel.credentials` list
+   - Mark "secrets" PTT node status = "done"
+
+10. Tell the user: "Secrets hunt complete. `interesting_secrets.md` written. Run `/exploit <target>` for phase 3."

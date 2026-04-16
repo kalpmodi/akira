@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Akira Discussions
+    url: https://github.com/Kalp1774/akira/discussions
+    about: General questions, show and tell, ideas
+  - name: Security Policy
+    url: https://github.com/Kalp1774/akira/blob/main/SECURITY.md
+    about: Reporting skill bugs or submitting findings

@@ -1,0 +1,37 @@
+{
+  "name": "akira",
+  "version": "1.0.0",
+  "description": "The AI pentest co-pilot that actually finds bugs. Phase-chained, evidence-gated offensive security skills for bug bounty and authorized pentesting.",
+  "author": {
+    "name": "Kalp1774",
+    "github": "https://github.com/Kalp1774"
+  },
+  "homepage": "https://github.com/Kalp1774/akira",
+  "repository": "https://github.com/Kalp1774/akira",
+  "license": "MIT",
+  "keywords": [
+    "pentest",
+    "security",
+    "bug-bounty",
+    "exploitation",
+    "recon",
+    "offensive-security",
+    "OWASP",
+    "red-team",
+    "CTF"
+  ],
+  "skills": [
+    "skills/plan-engagement",
+    "skills/recon",
+    "skills/secrets",
+    "skills/exploit",
+    "skills/zerodayhunt",
+    "skills/triage",
+    "skills/report",
+    "skills/ad-attacks",
+    "skills/oauth-attacks",
+    "skills/race-conditions",
+    "skills/cloud-audit",
+    "skills/ctf"
+  ]
+}

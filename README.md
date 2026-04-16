@@ -1,17 +1,8 @@
 <div align="center">
 
-```
- █████╗ ██╗  ██╗██╗██████╗  █████╗
-██╔══██╗██║ ██╔╝██║██╔══██╗██╔══██╗
-███████║█████╔╝ ██║██████╔╝███████║
-██╔══██║██╔═██╗ ██║██╔══██╗██╔══██║
-██║  ██║██║  ██╗██║██║  ██║██║  ██║
-╚═╝  ╚═╝╚═╝  ╚═╝╚═╝╚═╝  ╚═╝╚═╝  ╚═╝
-```
+![header](https://capsule-render.vercel.app/api?type=waving&color=6e40c9&height=220&section=header&text=AKIRA&fontSize=90&fontColor=fff&animation=fadeIn&fontAlignY=42&desc=The%20AI%20Pentest%20Co-Pilot%20That%20Actually%20Finds%20Bugs&descAlignY=65&descAlign=50&descSize=22)
 
-**The AI Pentest Co-Pilot That Actually Finds Bugs**
-
-*Phase-chained. Evidence-gated. Native in Claude Code, Gemini CLI, Cursor, Codex, and more.*
+[![Typing SVG](https://readme-typing-svg.demolab.com?font=Fira+Code&weight=700&size=18&duration=2500&pause=800&color=BD93F9&center=true&vCenter=true&width=700&lines=Phase-chained.+Evidence-gated.+No+hallucinations.;Native+in+Claude+Code%2C+Gemini+CLI%2C+Cursor%2C+Codex;12+attack+modules.+Real+bug+bounty+proof.;plan-engagement+%E2%86%92+recon+%E2%86%92+secrets+%E2%86%92+exploit+%E2%86%92+report)](https://github.com/Kalp1774/akira)
 
 [![GitHub Stars](https://img.shields.io/github/stars/Kalp1774/akira?style=flat-square&color=yellow)](https://github.com/Kalp1774/akira/stargazers)
 [![GitHub Forks](https://img.shields.io/github/forks/Kalp1774/akira?style=flat-square&color=blue)](https://github.com/Kalp1774/akira/network/members)

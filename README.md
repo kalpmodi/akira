@@ -243,6 +243,93 @@ Akira ships new skills every month. Here's what's coming:
 
 ---
 
+## Future Architecture — The Engine Beneath the Skills
+
+These are the four infrastructure upgrades that turn Akira from a great skill suite into an unbeatable autonomous offensive engine. Not new skills — foundational rewrites.
+
+### 1. Hacker-in-a-Box (Dockerized Environment)
+
+> *No more "command not found." No more broken local environments.*
+
+Instead of asking users to install 50 tools, Akira ships as a single container:
+
+```bash
+docker pull ghcr.io/kalp1774/akira-engine
+docker run -it akira-engine /plan-engagement target.com
+```
+
+Every tool (nuclei, nmap, sqlmap, subfinder, dalfox, httpx, katana, trufflehog) is pre-installed, path-configured, and version-locked inside. The AI knows exactly what it has. The user installs nothing.
+
+**Why it matters:** The current install + bootstrap model breaks on Windows, WSL, and hardened macOS. A container eliminates the entire class of "my environment is broken" failures. It also makes CI/CD security testing trivial — just pull and run.
+
+---
+
+### 2. Local Signal Filter (The Token Saver)
+
+> *Sending 5,000 lines of raw Nmap output to a cloud LLM is engineering malpractice.*
+
+A lightweight Python parser runs locally before any output reaches the AI. It reads raw tool output and extracts only the signal:
+
+```
+Raw nmap output:  5,000 lines  →  Parser  →  12 lines sent to AI
+                                              Open 80 (Apache 2.4.49)
+                                              Open 443 (nginx/1.18)
+                                              CVE-2021-41773 detected
+```
+
+**Why it matters:** API cost drops by ~90% per engagement. The AI's context window stays clean — no 4,990 lines of closed ports and timing noise. Smarter decisions, smaller bills. This is the difference between a $1 scan and a $10 scan at scale.
+
+---
+
+### 3. Stealth Governor (WAF Intelligence Feedback Loop)
+
+> *The AI shouldn't just run commands — it should feel the target's defenses and adapt.*
+
+A real-time monitor sits between the terminal and the AI. If it detects 3 consecutive `403 Forbidden` or `429 Too Many Requests` responses, it auto-pauses the current phase and injects a decision:
+
+```
+[STEALTH GOVERNOR] 3x 403 detected on api.target.com
+Switching to residential proxy. Adding 5s delay. Resuming with --rate-limit 10.
+```
+
+**Why it matters:** Right now Akira runs hot until it gets banned. The Governor turns it into a patient hunter — it learns the target's WAF fingerprint in real-time, adjusts aggression, and never burns its own IP. This is what separates a script kiddie tool from professional tradecraft.
+
+---
+
+### 4. Memory Vault (Local RAG — Persistent Engagement Memory)
+
+> *The context crash is the biggest unsolved problem in AI-assisted pentesting.*
+
+Every finding — IPs, API keys, headers, versions, credentials, behavioral observations — gets indexed into a local vector database (ChromaDB) as it's discovered. Phases query the vault instead of relying on in-context memory:
+
+```python
+# Exploit phase queries its own vault instead of reading files
+results = vault.query("any SSRF endpoints found during recon?")
+results = vault.query("AWS credentials from secrets phase")
+```
+
+**Why it matters:** A pentest can run for 3 days. Right now, after 2 hours the context window fills and the AI "forgets" the first recon findings. With the Memory Vault, every detail from Day 1 is queryable on Day 3. The "Context Crash" disappears entirely.
+
+---
+
+### 5. Dynamic Graph Engine (Flexible Pivoting — From Linear to Parallel)
+
+> *The current phase chain is a line. Real attacks are graphs.*
+
+When the AI discovers a new attack surface mid-engagement — a new IP, an internal subdomain, an exposed service — it should be able to fork a background task instead of abandoning the current thread:
+
+```
+Main thread:     /exploit api.target.com  (continues)
+Fork spawned:    /recon  internal.target.com  (runs in background)
+Fork spawned:    /secrets new-js-bundle.js    (runs in background)
+```
+
+Forks report back when complete. The main thread picks up their findings automatically.
+
+**Why it matters:** Right now finding something new mid-phase means either ignoring it or starting over. The Graph Engine turns Akira from a strict checklist into a collaborative team — multiple threads working in parallel, the way a real red team operates.
+
+---
+
 ## Sponsor
 
 Akira is free and MIT licensed. If it helped you find a bug or win a CTF, consider supporting development:

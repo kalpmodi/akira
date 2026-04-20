@@ -1,0 +1,47 @@
+skill:recon:
+  - changed-files:
+    - any-glob-to-any-file: skills/recon/**
+
+skill:exploit:
+  - changed-files:
+    - any-glob-to-any-file: skills/exploit/**
+
+skill:cloud-audit:
+  - changed-files:
+    - any-glob-to-any-file: skills/cloud-audit/**
+
+skill:secrets:
+  - changed-files:
+    - any-glob-to-any-file: skills/secrets/**
+
+skill:triage:
+  - changed-files:
+    - any-glob-to-any-file: skills/triage/**
+
+skill:report:
+  - changed-files:
+    - any-glob-to-any-file: skills/report/**
+
+skill:plan-engagement:
+  - changed-files:
+    - any-glob-to-any-file: skills/plan-engagement/**
+
+skill:race-conditions:
+  - changed-files:
+    - any-glob-to-any-file: skills/race-conditions/**
+
+skill:oauth-attacks:
+  - changed-files:
+    - any-glob-to-any-file: skills/oauth-attacks/**
+
+skill:zerodayhunt:
+  - changed-files:
+    - any-glob-to-any-file: skills/zerodayhunt/**
+
+skill:ctf:
+  - changed-files:
+    - any-glob-to-any-file: skills/ctf/**
+
+skill:ad-attacks:
+  - changed-files:
+    - any-glob-to-any-file: skills/ad-attacks/**

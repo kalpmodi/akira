@@ -4,7 +4,13 @@
 
 [![Typing SVG](https://readme-typing-svg.demolab.com?font=Fira+Code&weight=700&size=18&duration=2500&pause=800&color=00FF41&center=true&vCenter=true&width=700&lines=Phase-chained.+Evidence-gated.+No+hallucinations.;Native+in+Claude+Code%2C+Gemini+CLI%2C+Cursor%2C+Codex;12+attack+modules.+Real+bug+bounty+proof.;plan-engagement+%E2%86%92+recon+%E2%86%92+secrets+%E2%86%92+exploit+%E2%86%92+report)](https://github.com/Kalp1774/akira)
 
-<img src="assets/stats.svg" alt="Akira Stats" width="900"/>
+[![GitHub Stars](https://img.shields.io/github/stars/Kalp1774/akira?style=for-the-badge&color=00ff41&labelColor=0d1117&logo=github&logoColor=00ff41)](https://github.com/Kalp1774/akira/stargazers)
+[![GitHub Forks](https://img.shields.io/github/forks/Kalp1774/akira?style=for-the-badge&color=00ff41&labelColor=0d1117&logo=git&logoColor=00ff41)](https://github.com/Kalp1774/akira/network/members)
+[![GitHub Issues](https://img.shields.io/github/issues/Kalp1774/akira?style=for-the-badge&color=00ff41&labelColor=0d1117&logo=github&logoColor=00ff41)](https://github.com/Kalp1774/akira/issues)
+[![Last Commit](https://img.shields.io/github/last-commit/Kalp1774/akira?style=for-the-badge&color=00ff41&labelColor=0d1117&logo=git&logoColor=00ff41)](https://github.com/Kalp1774/akira/commits/main)
+[![License: MIT](https://img.shields.io/badge/License-MIT-00ff41?style=for-the-badge&labelColor=0d1117&logo=opensourceinitiative&logoColor=00ff41)](LICENSE)
+[![Skills](https://img.shields.io/badge/skills-12-00ff41?style=for-the-badge&labelColor=0d1117)](skills/)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-00ff41?style=for-the-badge&labelColor=0d1117)](CONTRIBUTING.md)
 
 **[Install in 30 seconds](#install) - [See Real Findings](#proof-it-works) - [Compare vs Competitors](#why-not-pentestgpt) - [Roadmap](#roadmap)**
 

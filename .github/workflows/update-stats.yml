@@ -1,0 +1,44 @@
+name: Update Stats SVG
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Fetch repo stats
+        id: stats
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "stars=$(gh api repos/Kalp1774/akira --jq '.stargazers_count')" >> $GITHUB_OUTPUT
+          echo "forks=$(gh api repos/Kalp1774/akira --jq '.forks_count')" >> $GITHUB_OUTPUT
+          echo "issues=$(gh api repos/Kalp1774/akira --jq '.open_issues_count')" >> $GITHUB_OUTPUT
+
+      - name: Regenerate stats SVG
+        run: |
+          python3 scripts/gen_stats.py \
+            --stars  "${{ steps.stats.outputs.stars }}" \
+            --forks  "${{ steps.stats.outputs.forks }}" \
+            --issues "${{ steps.stats.outputs.issues }}" \
+            > assets/stats.svg
+
+      - name: Commit if changed
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/stats.svg
+          git diff --staged --quiet || git commit -m "chore: update live stats [skip ci]"
+          git push

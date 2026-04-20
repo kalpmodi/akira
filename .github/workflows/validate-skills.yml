@@ -14,7 +14,7 @@ jobs:
     name: Validate skill file structure
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Check all skills have SKILL.md
         run: |

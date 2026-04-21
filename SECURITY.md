@@ -1,66 +1,53 @@
 # Security Policy
 
-## Reporting a Bug in Akira
+## Reporting a Vulnerability in Akira
 
-Found a bug, false positive pattern, or hallucination risk in Akira's skills?
-Found a technique that's outdated, wrong, or dangerous?
+Found a security bug, false positive pattern, or hallucination risk in Akira's skills?
 
-**Open a GitHub Issue** - label it `security-bug` or `skill-bug`.
+**Use GitHub Private Vulnerability Reporting (recommended):**
+1. Go to the [Security tab](https://github.com/Kalp1774/akira/security/advisories/new)
+2. Click **"Report a vulnerability"**
+3. Fill in the details - we'll respond within 48 hours
 
-We treat skill accuracy bugs the same as code bugs. If Akira tells you something wrong during a live engagement, that matters.
+This keeps the report private until it's fixed.
+
+**For non-sensitive bugs** (skill accuracy, outdated techniques, wrong outputs):
+- Open a GitHub Issue with label `security-bug` or `skill-bug`
 
 ---
 
 ## Reporting a Finding Made WITH Akira
 
-Found a real vulnerability using Akira? We want to know (with your permission).
+Found a real vulnerability using Akira on an authorized target?
 
-**What to do:**
-1. Report the vulnerability to the target first (responsible disclosure)
-2. After it's fixed or publicly disclosed, open a PR to [FINDINGS.md](FINDINGS.md)
-3. We'll add it to the live findings table with attribution
-
-You control how much detail goes in. Anonymous is fine. Program name optional.
+1. Report to the target first (responsible disclosure)
+2. After it's fixed or publicly disclosed, open a PR to add it to FINDINGS.md
+3. Anonymous is fine - program name optional, technique detail is what matters
 
 ---
 
-## Suggesting New Techniques
+## Suggesting New Techniques or Skills
 
-Security is moving fast. If you know a technique that should be in Akira:
+- Open an issue with label `technique-request` or `new-skill`
+- Describe: attack vector, tools involved, what evidence it produces
+- Link a public writeup or CVE if available
 
-- Open an issue with label `technique-request`
-- Describe: what attack vector, what tool, what evidence it produces
-- Bonus: link to a public writeup or CVE
-
-Good technique suggestions get fast-tracked into the next monthly release.
+Good suggestions get fast-tracked into the next release.
 
 ---
 
-## Suggesting New Skills
+## Contributing
 
-Want a full new skill module (e.g., `graphql`, `mobile`, `deserialization`)?
-
-- Open an issue with label `new-skill`
-- Describe the attack surface, key techniques, and tools needed
-- If you want to write it yourself, open a PR - attribution in CHANGELOG
-
-The roadmap in README already lists planned skills. If yours is on the list, +1 the issue to help prioritize.
-
----
-
-## Open to Contributions
-
-Akira is fully open:
 - Bug fixes - always welcome
 - Technique improvements - always welcome
-- New skills - welcome (see roadmap for planned modules)
-- FINDINGS.md entries - always welcome
+- New skills - welcome (see roadmap)
 
-No CLA. No corporate BS. Just open a PR.
+No CLA. Open a PR.
 
 ---
 
 ## Contact
 
-GitHub Issues is the primary channel.
-For sensitive disclosures about Akira itself (not findings made with it), use GitHub's private vulnerability reporting feature on this repo.
+For sensitive disclosures: [GitHub Private Vulnerability Reporting](https://github.com/Kalp1774/akira/security/advisories/new)
+
+For everything else: GitHub Issues.

@@ -7,7 +7,7 @@ git clone https://github.com/Kalp1774/akira
 cd akira && bash install.sh
 ```
 
-That installs all 12 skills into `~/.claude/skills/`. Open Claude Code and you're ready.
+That installs all 13 skills into `~/.claude/skills/`. Open Claude Code and you're ready.
 
 ---
 

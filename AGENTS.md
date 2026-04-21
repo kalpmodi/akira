@@ -11,19 +11,20 @@ Akira runs a complete pentest engagement chain:
 plan-engagement -> recon -> secrets -> exploit -> zerodayhunt -> triage -> report
 ```
 
-Plus specialized modules: ad-attacks, oauth-attacks, race-conditions, cloud-audit, ctf.
+Plus specialized modules: 403-bypass, ad-attacks, oauth-attacks, race-conditions, cloud-audit, ctf.
 
 ## Skill Index
 
 | Skill file | Purpose |
 |---|---|
 | `skills/plan-engagement/SKILL.md` | Scope target, initialize PTT and session.json |
-| `skills/recon/SKILL.md` | Subdomain enum, live hosts, ports, tech stack |
+| `skills/recon/SKILL.md` | 23-step recon: subdomains, AXFR, NSEC walk, passive DNS, JARM/JA4+, supply chain, reconFTW |
 | `skills/secrets/SKILL.md` | API keys, tokens, credentials in source/JS/git |
 | `skills/exploit/SKILL.md` | XSS, SQLi, nuclei, deserialization, SSTI, XXE |
 | `skills/zerodayhunt/SKILL.md` | Chain attacks, JWT confusion, SSRF->cloud, WAF bypass |
 | `skills/triage/SKILL.md` | Severity clustering, confidence scoring, FP gate |
 | `skills/report/SKILL.md` | Pentest report or bug bounty submission |
+| `skills/403-bypass/SKILL.md` | 29+ techniques: headers, parser confusion, BreakingWAF, H2C smuggling, JWT confusion, IIS/Apache/Node specific |
 | `skills/ad-attacks/SKILL.md` | Full Active Directory compromise chain |
 | `skills/oauth-attacks/SKILL.md` | OAuth/OIDC exploitation |
 | `skills/race-conditions/SKILL.md` | HTTP/2 single-packet race attacks |

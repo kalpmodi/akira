@@ -2,7 +2,7 @@
 
 <img src="assets/banner.svg" alt="AKIRA - AI Pentest Co-Pilot" width="900"/>
 
-[![Typing SVG](https://readme-typing-svg.demolab.com?font=Fira+Code&weight=700&size=18&duration=2500&pause=800&color=00FF41&center=true&vCenter=true&width=700&lines=Phase-chained.+Evidence-gated.+No+hallucinations.;Native+in+Claude+Code%2C+Gemini+CLI%2C+Cursor%2C+Codex;13+attack+modules.+Real+bug+bounty+proof.;plan-engagement+%E2%86%92+recon+%E2%86%92+secrets+%E2%86%92+exploit+%E2%86%92+report)](https://github.com/Kalp1774/akira)
+[![Typing SVG](https://readme-typing-svg.demolab.com?font=Fira+Code&weight=700&size=18&duration=2500&pause=800&color=00FF41&center=true&vCenter=true&width=700&lines=Attack+Graph+Engine.+Signal-driven.+Hypothesis-ranked.;Native+in+Claude+Code%2C+Gemini+CLI%2C+Cursor%2C+Codex;13+attack+modules.+Real+bug+bounty+proof.;plan-engagement+%E2%86%92+recon+%E2%86%92+secrets+%E2%86%92+exploit+%E2%86%92+report)](https://github.com/Kalp1774/akira)
 
 [![GitHub Stars](https://img.shields.io/github/stars/Kalp1774/akira?style=flat-square&color=yellow)](https://github.com/Kalp1774/akira/stargazers)
 [![GitHub Forks](https://img.shields.io/github/forks/Kalp1774/akira?style=flat-square&color=blue)](https://github.com/Kalp1774/akira/network/members)
@@ -28,6 +28,18 @@ No server. No 40-tool pre-install hell. No hallucinated findings. Every finding 
 ```
 /plan-engagement → /recon → /secrets → /exploit → /zerodayhunt → /triage → /report
 ```
+
+### Attack Graph Engine
+
+Akira v1.0.2 replaces the static phase chain with a live attack graph. The AI generates ranked hypotheses before any tool runs, then calibrates them in real-time as skills emit typed signals. When a new attack surface is discovered mid-engagement, a fork spawns automatically instead of abandoning the current thread:
+
+```
+Main thread:   /exploit api.target.com       (continues)
+Fork spawned:  /recon   internal.target.com  (SSRF pivot discovered)
+Fork spawned:  /secrets new-bundle.abc123.js (JS bundle found)
+```
+
+Every skill shares a live `session.json` signal bus. `TECH_DETECTED(AWS)` from recon immediately boosts the SSRF→IAM hypothesis in exploit. `CRED_FOUND` from secrets instantly propagates to all active threads. Confirmed findings write to `report_draft` in real-time - `/report` just formats, not discovers.
 
 ---
 
@@ -58,13 +70,13 @@ Full technique details and examples in the [Wiki - Skills](../../wiki/Skills).
 
 | Skill | Phase | What It Does |
 |---|---|---|
-| `/plan-engagement` | 0 | Scope definition, PTT generation, session.json init |
-| `/recon` | 1 | 23-step pipeline: subdomains, AXFR, NSEC walk, passive DNS, JARM/JA4+, supply chain, reconFTW |
-| `/secrets` | 2 | API keys, tokens, credentials in JS/source/git/Postman |
-| `/exploit` | 3 | XSS, SQLi, nuclei, deserialization, SSTI, XXE, NoSQLi |
+| `/plan-engagement` | 0 | Inference-first init: generates ranked hypotheses, signal bus, WIDE/DEEP/HARVEST/WRAP state machine, fork scheduler |
+| `/recon` | 1 | 23-step pipeline - hypothesis-driven step ordering, emits SURFACE_FOUND + TECH_DETECTED + WAF_CONFIRMED signals |
+| `/secrets` | 2 | Hypothesis-targeted scanning - emits CRED_FOUND/JWT_FOUND, AWS key triggers cloud-audit fork automatically |
+| `/exploit` | 3 | Tests top-probability hypothesis first - emits SSRF_VECTOR/VULN_CONFIRMED, writes report_draft on confirmation |
 | `/zerodayhunt` | 3+ | JWT confusion, SSRF->IAM, WAF bypass, type juggling |
 | `/triage` | 4 | Severity clustering, confidence scoring (0-100), FP gate |
-| `/report` | 5 | Pentest report or HackerOne/Bugcrowd submission format |
+| `/report` | 5 | Formats pre-filled report_draft - findings already written by exploit/zerodayhunt on confirmation |
 
 ### Specialized Attack Modules
 
@@ -103,6 +115,10 @@ Real anonymized findings made with Akira. Findings are anonymized per responsibl
 | Phase artifact handoffs (session.json) | - | - | **YES** |
 | Anti-hallucination evidence gate | - | - | **YES** |
 | Confidence scoring per finding (0-100) | - | - | **YES** |
+| **Attack graph engine (dynamic fork scheduling)** | - | - | **YES** |
+| **Hypothesis engine (ranked attack chains, real-time calibration)** | - | - | **YES** |
+| **Signal bus + cross-skill correlation** | - | - | **YES** |
+| **Live report draft (pre-filled on finding confirmation)** | - | - | **YES** |
 | AD full chain (BloodHound → DCSync) | - | Partial | **YES** |
 | 403 bypass (29+ techniques, conference-grade 2024-2026) | - | - | **YES** |
 | OAuth/OIDC exploitation suite | - | - | **YES** |
@@ -122,6 +138,7 @@ See the full roadmap in the [Wiki](../../wiki/Roadmap).
 |---|---|---|
 | **Hydra v1.0.0** | Shipped | 12 core skills |
 | **Hydra v1.0.1** | Shipped | `403-bypass` + recon 23-step upgrade |
+| **Hydra v1.0.2** | Shipped | Attack Graph Engine - hypothesis engine, signal bus, fork scheduler, WIDE/DEEP/HARVEST/WRAP state machine |
 | Basilisk v1.1.0 | Month 2 | `graphql`, `deserialization`, `prototype-pollution`, `supply-chain`, `ci-cd-audit` |
 | Raven v1.2.0 | Month 3 | Akira Context Engine, `cache-attacks`, `csp-bypass` |
 | Phantom v1.3.0 | Month 4 | `mobile`, `burp-integration` |

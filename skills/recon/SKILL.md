@@ -13,6 +13,57 @@ Reconnaissance is the most important phase - the attack surface you find here di
 
 ---
 
+## Session Intelligence Protocol
+
+Read session.json before running any step. This determines what to skip, what to prioritize, and what signals to emit.
+
+```bash
+SESSION=~/pentest-toolkit/results/<target>/session.json
+STATE=$(cat $SESSION 2>/dev/null | jq -r '.engagement_state // "WIDE"')
+HYPS=$(cat $SESSION 2>/dev/null | jq -r '.hypotheses[] | select(.status=="active") | "\(.id)[\((.probability * 100)|round)%] \(.label)"' 2>/dev/null)
+KNOWN_TECH=$(cat $SESSION 2>/dev/null | jq -r '.intel.technologies[]?' 2>/dev/null | tr '\n' ',')
+echo "State: $STATE | Tech already known: $KNOWN_TECH"
+echo "Active hypotheses: $HYPS"
+```
+
+**State machine check - do this first:**
+- `WIDE` → run full 23-step pipeline (standard flow)
+- `DEEP` → skip Steps 2-5 (subdomain discovery). Run only Steps 6, 8, 15, 18, 19 targeted at the active hypothesis chain surface.
+- `HARVEST` → skip recon entirely. The engagement is in evidence extraction mode.
+
+**Hypothesis-driven step ordering:**
+
+Before running steps, check hypotheses and reorder execution to confirm/deny them first:
+
+| Hypothesis mentions | Prioritize these steps first |
+|---|---|
+| AWS / GCP / Azure / cloud | 12, 18, 19 (cloud assets, scanners, JARM) |
+| JWT / OAuth / SSO | 10, 11 (JS analysis, GitHub dorking) |
+| Supply chain / dependency | 20 (dependency confusion) |
+| SSRF / internal IP | 8, 18 (port scan, scanner queries) |
+| Subdomain takeover | 13 (takeover detection) |
+| No specific hypothesis | Run Steps 1-22 in order |
+
+**Signal emission - emit these signals throughout the steps:**
+
+| Discovery point | Signal to emit | When |
+|---|---|---|
+| Step 2-4: new subdomains | `SURFACE_FOUND` | After merge, emit for significant batches |
+| Step 6: live hosts | `SURFACE_FOUND` | Each live host found |
+| Step 6: tech detected | `TECH_DETECTED` | Each framework/cloud provider |
+| Step 6: WAF header/fingerprint | `WAF_CONFIRMED` | When WAF identified |
+| Step 8: unusual open ports | `SURFACE_FOUND` | DB ports, internal services exposed |
+| Step 11: verified GitHub secret | `CRED_FOUND` | Immediately on TruffleHog verified hit |
+| Step 12: open cloud bucket | `SURFACE_FOUND` | Each accessible bucket |
+| Step 16a: AXFR success | `SURFACE_FOUND` | Entire zone dump - critical, emit immediately |
+| Step 20: unclaimed npm/pypi | `SURFACE_FOUND` | Each unclaimed package (type: supply_chain) |
+
+After every `TECH_DETECTED` signal, check correlation rules in plan-engagement Step 6 - tech signals may immediately activate modules or boost hypotheses.
+
+See `~/.claude/skills/plan-engagement/references/fork-protocol.md` for signal format and emission protocol.
+
+---
+
 ## Step 1: Setup + ASN/IP Range Mapping
 
 Start wide - map the organization's entire IP space, not just the given domain. Shadow assets often live on IP ranges not connected to the main domain.
@@ -1066,6 +1117,72 @@ EOF
 
 cat $RESULTS/interesting_recon.md
 ```
+
+---
+
+## Phase-End Protocol
+
+Run this before finishing recon. Do not skip.
+
+**1. Write intel back to session.json:**
+```bash
+SESSION=~/pentest-toolkit/results/<target>/session.json
+RESULTS=~/pentest-toolkit/results/<target>
+
+# Live hosts
+LIVE_HOSTS=$(cat $RESULTS/recon/live-hosts.txt 2>/dev/null | awk '{print $3}' | head -50 | jq -R . | jq -s .)
+# Technologies
+TECH=$(cat $RESULTS/recon/tech-stack.txt 2>/dev/null | awk '{print $2}' | sort -u | jq -R . | jq -s .)
+# Subdomains count
+SUBS=$(cat $RESULTS/recon/all-subdomains.txt 2>/dev/null | wc -l | tr -d ' ')
+
+# Merge into session.json (use jq to update without overwriting other fields)
+jq --argjson hosts "$LIVE_HOSTS" \
+   --argjson tech "$TECH" \
+   '.intel.live_hosts = $hosts | .intel.technologies = $tech' \
+   $SESSION > /tmp/session_tmp.json && mv /tmp/session_tmp.json $SESSION
+```
+
+**2. Calibrate hypotheses based on what was found:**
+```bash
+# AWS/cloud tech found → boost cloud-audit hypothesis
+grep -qi "aws\|s3\|lambda\|gcp\|azure" $RESULTS/recon/tech-stack.txt 2>/dev/null && \
+  echo "[SIGNAL] TECH_DETECTED: cloud provider found → boost cloud-audit hypothesis +15%, flag cloud-audit module"
+
+# WAF detected → activate 403-bypass
+cat $RESULTS/recon/httpx-full.json 2>/dev/null | jq -r '.tech[]?' | \
+  grep -qi "cloudflare\|akamai\|fastly\|imperva\|f5\|barracuda" && \
+  echo "[SIGNAL] WAF_CONFIRMED → activate 403-bypass module"
+
+# JWT in responses → boost JWT confusion hypothesis
+grep -qi "jwt\|bearer\|authorization" $RESULTS/recon/httpx-full.json 2>/dev/null && \
+  echo "[SIGNAL] JWT_FOUND → boost JWT/OAuth hypotheses +10%"
+```
+
+**3. Check fork opportunities (if budget allows and state == WIDE):**
+```bash
+# Internal services on unusual ports?
+grep -E "3306|5432|6379|27017|9200|2375|11211" $RESULTS/recon/interesting-ports.txt 2>/dev/null && \
+  echo "[FORK CANDIDATE] Internal service exposed - consider /exploit on specific port"
+
+# Unclaimed packages?
+[ -s $RESULTS/recon/supply-chain/unclaimed-packages.txt ] && \
+  echo "[FORK CANDIDATE] Unclaimed packages - consider dependency confusion fork"
+
+# AXFR success?
+[ -s $RESULTS/recon/axfr-success.txt ] && \
+  echo "[FORK CANDIDATE] Zone transfer succeeded - new subdomains, rerun /recon on discovered hosts"
+```
+
+**4. Update session.json thread status:**
+```bash
+jq '.threads[0].phase = "secrets" | .ptt.graph[0].status = "done"' \
+  $SESSION > /tmp/s.json && mv /tmp/s.json $SESSION
+```
+
+**5. Verify interesting_recon.md was written** (Step 23 does this - confirm file exists before finishing).
+
+Then run `/secrets <target>`.
 
 ---
 

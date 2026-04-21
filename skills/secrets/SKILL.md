@@ -8,6 +8,67 @@ description: Use when hunting for secrets, API keys, tokens, or credentials on a
 ## Overview
 Runs secrets hunting toolkit with recon-provided scope (if available) and summarizes verified findings into `interesting_secrets.md`.
 
+---
+
+## Session Intelligence Protocol
+
+**Read before scanning:**
+
+```bash
+SESSION=~/pentest-toolkit/results/<target>/session.json
+STATE=$(cat $SESSION 2>/dev/null | jq -r '.engagement_state // "WIDE"')
+HYPS=$(cat $SESSION 2>/dev/null | jq -r '.hypotheses[] | select(.status=="active") | "\(.id)[\((.probability*100)|round)%] \(.label)"' 2>/dev/null)
+KNOWN_ENDPOINTS=$(cat $SESSION 2>/dev/null | jq -r '.intel.endpoints[]?' 2>/dev/null)
+KNOWN_TECH=$(cat $SESSION 2>/dev/null | jq -r '.intel.technologies[]?' 2>/dev/null | tr '\n' ',')
+echo "State: $STATE | Known endpoints: $(echo $KNOWN_ENDPOINTS | wc -w)"
+echo "Hypotheses: $HYPS"
+```
+
+**State machine check:**
+- `HARVEST` → skip secrets scan. Evidence collection only - verify already-found credentials, don't discover new ones.
+- `DEEP` → focus scanning exclusively on surfaces relevant to the active hypothesis (e.g., if H1 is SSRF→IAM, hunt for AWS keys specifically).
+- `WIDE` → full scan.
+
+**Hypothesis-driven focus:**
+
+| Active hypothesis | Focus secrets scan on |
+|---|---|
+| SSRF → AWS IAM | AWS keys (AKIA/ASIA), `.env` files, docker-compose secrets |
+| JWT confusion | JWT signing keys, JWKS endpoints, RS256 private keys |
+| OAuth redirect | OAuth client_secret, client_id in JS/config |
+| Race condition | Payment API keys, transaction tokens |
+| Supply chain | Package registry tokens, CI/CD secrets in GitHub |
+
+**Use known intel from session.json to target the scan:**
+- `intel.endpoints` → scan these specific endpoints for exposed configs
+- `intel.technologies` → select relevant secret patterns (Django → `SECRET_KEY`, AWS → `AKIA`, Node → `.env`)
+- `intel.live_hosts` → prioritize these hosts for JS analysis
+
+**Signal emission - emit these as you find them:**
+
+| Discovery | Signal | Action |
+|---|---|---|
+| Verified secret (any) | `CRED_FOUND` (confidence: 100) | Emit immediately, check correlation |
+| AWS key found | `CRED_FOUND` + `TECH_DETECTED(AWS)` | **Immediately check fork budget → spawn /cloud-audit** |
+| JWT token found | `JWT_FOUND` | Boost JWT confusion hypothesis +15% |
+| API key found | `CRED_FOUND` | Write to `intel.api_keys[]` |
+| Internal hostname in config | `SURFACE_FOUND` | Add to `intel.internal_ips[]`, fork recon |
+| API spec found (swagger/openapi) | `SURFACE_FOUND` | Write all endpoints to `intel.endpoints[]` |
+
+**AWS key fork trigger (critical - do not skip):**
+```bash
+# If AWS key found in any scan result:
+AWS_KEY=$(grep -r "AKIA\|ASIA" $RESULTS/secrets/ 2>/dev/null | head -1)
+if [ -n "$AWS_KEY" ]; then
+  echo "[SIGNAL] CRED_FOUND: AWS access key detected"
+  echo "[CORRELATION] CRED_FOUND + TECH_DETECTED(AWS) → spawn /cloud-audit immediately"
+  # Check fork budget and spawn cloud-audit fork if budget allows
+  # Write to session.json signals[] and discovery_queue[] if budget full
+fi
+```
+
+---
+
 ## Steps
 
 1. **Get target** from user if not provided.
@@ -90,8 +151,38 @@ findings-present
    ```
    If API spec found: extract all endpoints and add to intel for exploit phase.
 
-9. **Update session.json** with any found credentials:
-   - Add verified secrets to `intel.credentials` list
-   - Mark "secrets" PTT node status = "done"
+9. **Phase-End Protocol - write back to session.json:**
+
+```bash
+SESSION=~/pentest-toolkit/results/<target>/session.json
+RESULTS=~/pentest-toolkit/results/<target>
+
+# Write all verified credentials to intel
+CREDS=$(cat $RESULTS/secrets/trufflehog.json 2>/dev/null | \
+  jq -c '[.[] | select(.Verified==true) | {type: .DetectorName, value: .Raw[:40], source: .SourceMetadata.Data.Filesystem.file, tested: false}]')
+
+# Write API keys, JWT tokens separately
+API_KEYS=$(grep -rh "AKIA\|sk-\|Bearer " $RESULTS/secrets/ 2>/dev/null | head -20 | jq -R . | jq -s .)
+
+jq --argjson creds "${CREDS:-[]}" \
+   --argjson keys "${API_KEYS:-[]}" \
+   '.intel.credentials = $creds | .intel.api_keys = $keys | .threads[0].phase = "exploit"' \
+   $SESSION > /tmp/s.json && mv /tmp/s.json $SESSION
+
+# Emit signals for each verified credential
+echo "Emitting CRED_FOUND signals for verified credentials..."
+
+# Calibrate hypotheses:
+# - AWS key found → boost cloud-audit hypothesis to 95%
+# - JWT found → boost JWT confusion hypothesis +15%
+# - OAuth secret found → boost OAuth redirect hypothesis +20%
+
+# Check fork opportunities:
+[ -n "$(grep -r 'AKIA\|ASIA' $RESULTS/secrets/ 2>/dev/null | head -1)" ] && \
+  echo "[FORK] AWS key confirmed → cloud-audit fork (priority: 95)"
+
+[ -s $RESULTS/secrets/api_spec.json ] && \
+  echo "[INTEL] API spec found → writing endpoints to session.json intel.endpoints[]"
+```
 
 10. Tell the user: "Secrets hunt complete. `interesting_secrets.md` written. Run `/exploit <target>` for phase 3."

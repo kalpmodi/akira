@@ -239,18 +239,88 @@ All skills write new intel here as they discover it.
 
 ## report_draft{}
 
+`report_draft.findings[]` uses the **Canonical Scalpel Finding Record** format.
+Write the full record the moment a hypothesis is confirmed. `triage` will run the Precision Gate and assign the SCL ID. `/report` reads this and formats — it does not discover, only presents.
+
 ```json
 "report_draft": {
   "findings": [
     {
-      "id": "F1",
-      "title": "SSRF → AWS IAM Credential Extraction",
+      "scl_id": null,
+      "title": "SSRF -> AWS IAM Credential Extraction",
+      "date": "2026-04-21",
       "severity": "Critical",
-      "hypothesis": "H1",
-      "attack_chain": ["SSRF at /api/upload", "→ metadata.target.com", "→ IAM credentials extracted"],
-      "evidence_signals": ["sig-001", "sig-004", "sig-009"],
-      "http_proof": "http-responses/ssrf-iam-chain.txt",
+      "confidence": 96,
       "status": "confirmed",
+
+      "dna": {
+        "hash": null,
+        "vuln_class": "ssrf_aws_imds_iam",
+        "tech_fingerprint": ["aws", "nginx"],
+        "chain_fingerprint": "proxy_endpoint->imdsv1->iam_creds->s3_access"
+      },
+
+      "kccg": {
+        "score": null,
+        "initial_access": {"pass": true, "proof": "GET /api/proxy?url=http://169.254.169.254/"},
+        "escalation": {"pass": true, "proof": "IAM role ec2-prod-role credentials extracted"},
+        "data_access": {"pass": true, "proof": "s3://prod-db-backups listed"},
+        "reproducible": {"pass": true, "proof": "3/3 replays identical"},
+        "scope_valid": {"pass": true, "proof": "api.target.com in program scope"},
+        "severity_cap": null
+      },
+
+      "precision_gate": {
+        "authenticity": null,
+        "reproducibility": null,
+        "data_sensitivity": null,
+        "scope_validity": null,
+        "kccg_threshold": null,
+        "status": null,
+        "failed_layers": []
+      },
+
+      "kill_chain": [
+        {
+          "step": 1,
+          "technique": "SSRF injection via proxy endpoint",
+          "action": "GET /api/proxy?url=http://169.254.169.254/latest/meta-data/",
+          "response_fragment": "ami-id, instance-id, iam/",
+          "signal": "SSRF_VECTOR"
+        },
+        {
+          "step": 2,
+          "technique": "IMDSv1 credential extraction",
+          "action": "GET /api/proxy?url=.../iam/security-credentials/ec2-prod-role",
+          "response_fragment": "AccessKeyId: ASIAZ...",
+          "signal": "CRED_FOUND"
+        },
+        {
+          "step": 3,
+          "technique": "Credential verification and data access",
+          "action": "aws sts get-caller-identity && aws s3 ls",
+          "response_fragment": "prod-db-backups accessible",
+          "signal": "VULN_CONFIRMED"
+        }
+      ],
+
+      "evidence": {
+        "http_proof": "http-responses/ssrf-iam-chain.txt",
+        "supporting_signals": ["sig-003", "sig-007"],
+        "pocs_dir": "pocs/"
+      },
+
+      "impact": {
+        "description": "Full AWS account access, production database backups exposed",
+        "cvss_estimate": 9.8
+      },
+
+      "engagement": {
+        "hypothesis": "H1",
+        "skills_chain": ["recon", "exploit", "cloud-audit"],
+        "signals_path": ["SSRF_VECTOR", "CRED_FOUND", "VULN_CONFIRMED"]
+      },
+
       "confirmed_at": "2026-04-21 15:12"
     }
   ],
@@ -258,4 +328,59 @@ All skills write new intel here as they discover it.
 }
 ```
 
-Write here the moment a hypothesis is confirmed. Report skill reads this and formats it — it does not discover findings, only presents them.
+**Field fill rules:**
+- `scl_id`: filled by `/triage` after Precision Gate passes
+- `dna.hash`: filled by `/triage` using sha256(vuln_class+tech_fingerprint+chain_fingerprint)
+- `kccg.score` and `kccg.severity_cap`: computed by `/triage`
+- `precision_gate.*`: all layers evaluated by `/triage`
+- `kill_chain[]`: fill step-by-step as the chain is proven during exploitation
+- Everything else: fill immediately when the finding is confirmed
+
+---
+
+## scalpel{}
+
+Top-level engagement precision tracking block. Written by `plan-engagement` on init, updated by all skills.
+
+```json
+"scalpel": {
+  "id_counter": 6,
+  "snr": {
+    "tool_runs": 0,
+    "signals_emitted": 0,
+    "signals_confirmed": 0,
+    "false_positives": 0,
+    "yield_rate": null,
+    "conversion_rate": null,
+    "noise_penalty": null,
+    "scalpel_score": null
+  },
+  "doom_loop": {
+    "technique_runs": {},
+    "flagged_techniques": []
+  }
+}
+```
+
+**SNR formula:**
+```
+yield_rate       = signals_emitted / tool_runs
+conversion_rate  = signals_confirmed / signals_emitted
+noise_penalty    = false_positives / (signals_confirmed + false_positives)
+scalpel_score    = round((conversion_rate * 100) * (1 - noise_penalty))
+```
+
+**Doom loop detection:**
+- `technique_runs` tracks `{"surface:technique": count}` for every action
+- If any entry exceeds 3 on the same surface -> add to `flagged_techniques`
+- Skills must check `flagged_techniques` before running - skip flagged combinations
+- Reset count when surface is confirmed or denied
+
+**Scalpel score interpretation:**
+- 80-100: Surgical - excellent hypothesis quality, low noise
+- 60-79: Precise - good signal discipline, minor noise
+- 40-59: Noisy - technique breadth too wide, tighten hypotheses
+- Below 40: Undisciplined - methodology needs review
+
+`id_counter` starts at next available SCL number. Read by `triage` to assign SCL IDs.
+After assigning `N` findings in a session, increment by N and write back to `~/.akira/memory.json`.

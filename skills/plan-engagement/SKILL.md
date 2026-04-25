@@ -13,6 +13,41 @@ Extract everything from the user's message. Ask at most one question — only if
 
 ---
 
+## Step 0: Bootstrap from Cross-Engagement Memory
+
+Before anything else, read `~/.akira/memory.json` to seed this engagement with prior intelligence.
+
+```bash
+MEMORY=~/.akira/memory.json
+
+# Read global SCL counter for this session
+SCL_COUNTER=$(jq -r '.scl_id_counter // 1' $MEMORY 2>/dev/null || echo 1)
+
+# Read ATW flagged techniques (hallucination guard)
+FLAGGED=$(jq -r '.hallucination_guard | to_entries[] | select(.value.flagged==true) | .key' $MEMORY 2>/dev/null)
+
+# Read DNA registry for pattern matching
+DNA_REGISTRY=$(jq -r '.dna_registry' $MEMORY 2>/dev/null)
+
+echo "Memory loaded. SCL counter: $SCL_COUNTER | Flagged techniques: $(echo $FLAGGED | wc -w)"
+```
+
+If `~/.akira/memory.json` does not exist:
+```bash
+mkdir -p ~/.akira
+# Bootstrap from FINDINGS.md DNA Registry (5 confirmed findings pre-seeded)
+# Write initial memory.json with defaults - see references/memory-schema.md
+# Set scl_id_counter to 6 (next after existing 5 findings)
+```
+
+**Use memory to calibrate hypothesis priors in Step 2:**
+- Match extracted tech hints against `tech_vuln_priors` keys
+- For each match, use stored `prior_probability` as the hypothesis starting point
+- Do NOT exceed 0.85 even if memory says higher (anti-overfitting cap)
+- Write `flagged_techniques` from `hallucination_guard` into `session.json scalpel.doom_loop`
+
+---
+
 ## Step 1: Infer From the Message
 
 Extract without asking:
@@ -74,9 +109,11 @@ Auto-flag additional modules based on extracted signals and hints:
 | 403 / forbidden / blocked / WAF hint | `403-bypass` |
 | OAuth / SSO / OIDC / JWT / login | `oauth-attacks` |
 | checkout / cart / coupon / wallet / transfer / balance | `race-conditions` |
-| AD / LDAP / Kerberos / domain controller / corporate | `ad-attacks` |
+| AD / LDAP / Kerberos / domain controller / corporate | `redteam` (canonical AD chain - ad-attacks is a redirect stub) |
 | GraphQL / introspection | `zerodayhunt` (GraphQL focus) |
-| HackTheBox / TryHackMe / CTF / flag | `ctf` |
+| red team / APT / assumed breach / lateral movement / post-exploitation / C2 / persistence / ADCS / DCSync / Kerberoast / BloodHound / Windows domain / internal network | `redteam` |
+
+**CTF isolation:** `ctf` module ONLY activates when the user explicitly declares "CTF mode", mentions a CTF platform (HackTheBox / TryHackMe / PicoCTF / CTFtime), or uses the `/ctf` command directly. Keyword "flag" alone in a pentest context does NOT trigger ctf - it means a flag in the sense of flagged vulnerability. Never auto-activate ctf during a live pentest or bug bounty engagement.
 
 Flagged modules activate when the main chain reaches Phase 3 or a relevant signal confirms them.
 
@@ -88,6 +125,9 @@ Create `~/pentest-toolkit/results/<target>/`:
 
 ```bash
 mkdir -p ~/pentest-toolkit/results/<target>/{screenshots,http-responses,loot}
+touch ~/pentest-toolkit/results/<target>/signals.jsonl
+# signals.jsonl is append-only - all phases emit signals here via signals.sh
+# Race-proof: no read-modify-write. Multiple forks can write simultaneously.
 ```
 
 Write `session.json` — lean init, only populate what is actually known:
@@ -109,6 +149,7 @@ Write `session.json` — lean init, only populate what is actually known:
   },
   "active_chain": ["recon", "secrets", "exploit", "triage", "report"],
   "flagged_modules": [],
+  "_chain_note": "When redteam module is flagged, insert it after exploit: recon->secrets->exploit->redteam->triage->report",
   "hypotheses": [
     {
       "id": "H1",
@@ -121,7 +162,7 @@ Write `session.json` — lean init, only populate what is actually known:
       "denying_signals": []
     }
   ],
-  "signals": [],
+  "_signals": "see signals.jsonl - append-only, not stored in session.json",
   "threads": [
     {
       "id": "main",
@@ -156,6 +197,68 @@ Write `session.json` — lean init, only populate what is actually known:
   "report_draft": {
     "findings": [],
     "last_updated": null
+  },
+  "scalpel": {
+    "id_counter": <SCL_COUNTER from memory>,
+    "snr": {
+      "tool_runs": 0,
+      "signals_emitted": 0,
+      "signals_confirmed": 0,
+      "false_positives": 0,
+      "yield_rate": null,
+      "conversion_rate": null,
+      "noise_penalty": null,
+      "scalpel_score": null
+    },
+    "doom_loop": {
+      "technique_runs": {},
+      "flagged_techniques": <FLAGGED from memory.json hallucination_guard>
+    },
+    "active_manifest": null
+  },
+  "intel_relay": {
+    "from_recon": {
+      "js_bundle_urls": [],
+      "github_orgs": [],
+      "live_hosts_with_tech": [],
+      "interesting_endpoints": [],
+      "cloud_hints": {"aws": false, "gcp": false, "azure": false},
+      "waf": null,
+      "open_ports": {},
+      "parameter_names": [],
+      "wayback_api_endpoints": []
+    },
+    "from_secrets": {
+      "verified_credentials": [],
+      "api_spec_endpoints": [],
+      "jwt_tokens": [],
+      "aws_keys_found": false,
+      "github_secrets_found": false,
+      "postman_collections": []
+    },
+    "from_exploit": {
+      "ssrf_vectors": [],
+      "confirmed_vulns": [],
+      "internal_ips": [],
+      "verified_auth_bypass": false
+    },
+    "from_cloud_audit": {
+      "cloud_credentials": [],
+      "data_accessed": [],
+      "privesc_confirmed": false,
+      "privesc_path": null
+    },
+    "from_redteam": {
+      "da_credentials_obtained": false,
+      "da_credentials": null,
+      "lateral_movement_hosts": [],
+      "kill_chain": null,
+      "privesc_confirmed": false,
+      "persistence_confirmed": false,
+      "techniques_used": [],
+      "evasion_techniques": [],
+      "exfil_confirmed": false
+    }
   }
 }
 ```
@@ -206,18 +309,13 @@ Every skill in the chain emits signals when discoveries are made. Signals are th
 
 **Emit a signal for every meaningful discovery. Never just log something locally.**
 
-Signal format in `session.json`:
+Signal storage: `~/pentest-toolkit/results/<target>/signals.jsonl` (append-only JSONL, NOT session.json).
+Use `emit_signal` from `~/.claude/skills/_shared/signals.sh` for all emission.
+This is race-proof: multiple forks append simultaneously without conflict.
+
+Signal line format (one JSON object per line):
 ```json
-{
-  "id": "sig-NNN",
-  "type": "SURFACE_FOUND",
-  "value": "internal.target.com:8080",
-  "confidence": 91,
-  "emitted_by": "main/exploit",
-  "timestamp": "YYYY-MM-DD HH:MM",
-  "consumed_by": [],
-  "triggered": null
-}
+{"id":"sig-1714900000000","ts":"2026-04-25T10:00:00Z","type":"SURFACE_FOUND","value":"internal.target.com:8080","source":"main/exploit","confidence":0.91}
 ```
 
 Signal types:
@@ -242,10 +340,19 @@ After every new signal arrives, check these patterns. When a pattern matches —
 | `CRED_FOUND` + 2+ `SURFACE_FOUND` | Credential spray fork on all discovered surfaces |
 | `JWT_FOUND` + `TECH_DETECTED(node/python/java)` | Spawn JWT confusion test, activate oauth-attacks |
 | `INTERNAL_IP` + `SSRF_VECTOR` | Transition to DEEP state, concentrate all budget on this chain |
+| `AUTH_BYPASS` + `INTERNAL_IP` | Activate redteam module, shift to assumed-breach lateral movement |
+| `TECH_DETECTED(AD/LDAP/Kerberos)` + `SURFACE_FOUND` | Activate redteam module, BloodHound + Kerberoast first |
+| `CRED_FOUND(domain)` + `INTERNAL_IP` | Full fork to redteam - credential reuse across internal hosts |
 | 3+ `VULN_CONFIRMED` | Transition to HARVEST state |
 | `TECH_DETECTED` signal | Push tech to all active thread contexts immediately |
 
 These are patterns to recognize, not exhaustive rules. Use judgment — if a combination of signals tells a story, act on the story.
+
+**When redteam activates:** update `active_chain` to `["recon","secrets","exploit","redteam","triage","report"]` and write it to session.json. Do this immediately when the redteam module is flagged, not at phase-end.
+
+```bash
+jq '.active_chain = ["recon","secrets","exploit","redteam","triage","report"]' $SESSION > /tmp/s.json && mv /tmp/s.json $SESSION
+```
 
 ### Tech Stack Propagation
 
@@ -265,6 +372,16 @@ TECH_DETECTED: AWS
 → activate cloud-audit module
 → add 169.254.169.254 to SSRF target list
 → boost H1 by +15%
+
+TECH_DETECTED: Active Directory / LDAP / Kerberos
+→ activate redteam module
+→ exploit threads: deprioritize web vulns, add NTLM relay + Kerberoast to queue
+→ secrets threads: look for domain credentials in configs + environment vars
+→ redteam: run BloodHound collection immediately on any domain user foothold
+
+TECH_DETECTED: Windows domain joined host
+→ redteam: check for unconstrained delegation, ADCS enrollment endpoint, SMB signing
+→ lateral movement via PTH/PTT as soon as any NTLM hash obtained
 ```
 
 ---
@@ -287,8 +404,15 @@ See `references/fork-protocol.md` for the full protocol used by all skills.
 
 ### Fork priority when budget is full
 ```
-priority = (impact_score × confidence) / estimated_token_cost
+priority = (impact_score × confidence × exploitability) / estimated_token_cost
 ```
+
+Where:
+- `impact_score`: CVSS-like impact (0-10). SSRF->IAM = 9.8, XSS = 6.0, info disclosure = 3.0
+- `confidence`: hypothesis probability at time of fork decision (0-100)
+- `exploitability`: from `~/.akira/memory.json atw[technique].confirmation_rate` (default 0.40 if unknown)
+- `estimated_token_cost`: recon=3, secrets=2, exploit=4, cloud-audit=5, 403-bypass=3
+
 Highest score gets the next available slot. User sees: "2 forks active, 1 queued (score: 84, surface: internal.target.com)."
 
 ### Fork brief — keep under 80 tokens
@@ -378,3 +502,4 @@ Total response: under 20 lines. The engagement is live. Let the graph build itse
 
 - `references/session-schema.md` — every session.json field defined, what writes it, what reads it
 - `references/fork-protocol.md` — full signal emission and fork briefing protocol for all skills
+- `references/memory-schema.md` — cross-engagement memory structure, ATW, hallucination guard, prior decay

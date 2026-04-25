@@ -13,6 +13,74 @@ A 403 doesn't always mean truly inaccessible. Misconfigured reverse proxies, CDN
 
 ---
 
+## Phase 0: Smart Intake
+
+```bash
+source ~/.claude/skills/_shared/phase0.sh
+source ~/.claude/skills/_shared/signals.sh
+
+p0_init_vars "$1"
+p0_state_gate "HARVEST" || exit 0
+p0_read_relay recon
+p0_read_memory
+p0_read_hypotheses
+
+TECH_STACK=$KNOWN_TECH  # alias for downstream references
+
+echo "=== PHASE 0 403-BYPASS INTAKE: $TARGET ==="
+echo "State: $STATE | WAF: $WAF"
+echo "Tech stack: $TECH_STACK"
+echo "Target endpoints for bypass: $(echo "$INTERESTING_ENDPOINTS" | wc -l)"
+echo "Top hypothesis: $TOP_HYPO_LABEL [$TOP_HYPO_PROB%]"
+echo "ATW flagged (avoid): ${ATW_FLAGGED:-none}"
+```
+
+### Execution Manifest
+
+Build targeted manifest: one item per bypass technique class per target endpoint. Priority is determined by WAF type detected.
+
+```bash
+# WAF-to-priority mapping:
+# Cloudflare  -> c02 (header), c05 (double-encode), c12 (automated), c17b (origin IP direct hit)
+# Akamai      -> c10 (smuggling OPTIONS+line-folding CVE-2025-32094), c11 (cache deception), c02
+# AWS WAF     -> c17 (ALB direct), c02 (header), c04 (path manipulation)
+# Nginx+Apache-> c07 (path confusion CVE-2025-0108), c08 (off-by-slash), c15 (mod_proxy CVE-2024-38473)
+# IIS         -> c18 (tilde enum + ADS), c22b (Apache ? bypass if applicable)
+# unknown     -> c02, c04, c09, c12 (automated sweep)
+
+MANIFEST=$(cat << 'MANIFEST_EOF'
+{
+  "phase": "403-bypass",
+  "generated_at": "YYYY-MM-DD HH:MM",
+  "items": [
+    {"id":"b01","tool":"baseline","target":"<403-endpoint>","reason":"fingerprint WAF/CDN/server before trying anything","priority":"MUST","status":"pending","skip_reason":null},
+    {"id":"b02","tool":"header-bypass","target":"<403-endpoint>","reason":"X-Forwarded-For/X-Original-URL IP spoofing","priority":"MUST","status":"pending","skip_reason":null},
+    {"id":"b03","tool":"path-manipulation","target":"<403-endpoint>","reason":"encoding/case/extension tricks bypass string-match ACL","priority":"MUST","status":"pending","skip_reason":null},
+    {"id":"b04","tool":"hop-by-hop-strip","target":"<403-endpoint>","reason":"strip auth headers via Connection: header","priority":"SHOULD","status":"pending","skip_reason":null},
+    {"id":"b05","tool":"double-url-encoding","target":"<403-endpoint>","reason":"WAF decodes once, backend decodes twice (DEF CON 2024)","priority":"SHOULD","status":"pending","skip_reason":null},
+    {"id":"b06","tool":"method-fuzzing","target":"<403-endpoint>","reason":"ACL may only block GET, not PUT/POST/TRACE","priority":"SHOULD","status":"pending","skip_reason":null},
+    {"id":"b07","tool":"nomore403","target":"<403-endpoint>","reason":"330+ automated bypass techniques","priority":"MUST","status":"pending","skip_reason":null},
+    {"id":"b08","tool":"waf-specific-bypass","target":"<403-endpoint>","reason":"targeted technique for detected WAF type","priority":"MUST","status":"pending","skip_reason":"skip if WAF=unknown"},
+    {"id":"b09","tool":"h2c-smuggling","target":"<403-endpoint>","reason":"h2c upgrade causes proxy to stop inspecting requests","priority":"IF_TIME","status":"pending","skip_reason":null},
+    {"id":"b10","tool":"prototype-pollution","target":"<403-endpoint>","reason":"Node.js/Express auth bypass via __proto__","priority":"IF_TIME","status":"pending","skip_reason":"skip if no Node.js in tech stack"}
+  ]
+}
+MANIFEST_EOF
+)
+
+jq --argjson m "$MANIFEST" '.scalpel.active_manifest = $m' $SESSION > /tmp/s.json && mv /tmp/s.json $SESSION
+```
+
+**Manifest adjustment rules (apply before starting):**
+- WAF=Cloudflare AND Zafran BreakingWAF worth testing: add b11 for origin IP direct bypass
+- WAF=Akamai: promote b09 to MUST (CVE-2025-32094 Akamai-specific)
+- WAF=Nginx+Apache in chain: promote path confusion (Step 7) to b04 MUST
+- IIS detected: add b12 for tilde+ADS bypass as MUST
+- No Node.js in tech stack: mark b10 as skipped
+- If `STATE=DEEP`: keep only b01, b02, b07, b08 as MUST; mark others IF_TIME
+
+---
+
 ## Step 1: Baseline the 403
 
 Fingerprint what's enforcing the block before trying anything:
@@ -1107,6 +1175,23 @@ cat > ~/pentest-toolkit/results/<target>/interesting_403bypass.md << 'EOF'
 ### Recommended Report Title
 "403 Bypass via [Technique] on [Endpoint] leads to [Impact]"
 EOF
+```
+
+---
+
+## Phase-End: Completion Gate
+
+```bash
+PENDING_MUST=$(jq '[.scalpel.active_manifest.items[] | select(.priority=="MUST" and .status=="pending")] | length' $SESSION 2>/dev/null || echo 0)
+if [ "$PENDING_MUST" -gt 0 ]; then
+  echo "=== COMPLETION GATE BLOCKED ==="
+  echo "$PENDING_MUST MUST items not completed:"
+  jq '.scalpel.active_manifest.items[] | select(.priority=="MUST" and .status=="pending") | "\(.id): \(.tool) on \(.target)"' $SESSION
+  echo "Run them now or mark skipped with reason before calling /triage."
+fi
+
+PENDING_SHOULD=$(jq '[.scalpel.active_manifest.items[] | select(.priority=="SHOULD" and .status=="pending")] | length' $SESSION 2>/dev/null || echo 0)
+[ "$PENDING_SHOULD" -gt 0 ] && echo "WARNING: $PENDING_SHOULD SHOULD items pending (suboptimal but acceptable)"
 ```
 
 ---

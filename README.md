@@ -2,18 +2,21 @@
 
 <img src="assets/banner.svg" alt="AKIRA - AI Pentest Co-Pilot" width="900"/>
 
-[![Typing SVG](https://readme-typing-svg.demolab.com?font=Fira+Code&weight=700&size=18&duration=2500&pause=800&color=00FF41&center=true&vCenter=true&width=700&lines=Attack+Graph+Engine.+Signal-driven.+Hypothesis-ranked.;Native+in+Claude+Code%2C+Gemini+CLI%2C+Cursor%2C+Codex;13+attack+modules.+Real+bug+bounty+proof.;plan-engagement+%E2%86%92+recon+%E2%86%92+secrets+%E2%86%92+exploit+%E2%86%92+report)](https://github.com/Kalp1774/akira)
+[![Typing SVG](https://readme-typing-svg.demolab.com?font=Fira+Code&weight=700&size=18&duration=2500&pause=800&color=00FF41&center=true&vCenter=true&width=700&lines=Attack+Graph+Engine.+Signal-driven.+Hypothesis-ranked.;Thin+router+%2B+technique+library.+75%25+token+reduction.;Native+in+Claude+Code%2C+Gemini+CLI%2C+Cursor%2C+Codex;16+skills.+68+technique+files.+Real+bug+bounty+proof.;plan-engagement+%E2%86%92+recon+%E2%86%92+secrets+%E2%86%92+exploit+%E2%86%92+report)](https://github.com/kalpmodi/akira)
 
-[![GitHub Stars](https://img.shields.io/github/stars/Kalp1774/akira?style=flat-square&color=yellow)](https://github.com/Kalp1774/akira/stargazers)
-[![GitHub Forks](https://img.shields.io/github/forks/Kalp1774/akira?style=flat-square&color=blue)](https://github.com/Kalp1774/akira/network/members)
-[![GitHub Issues](https://img.shields.io/github/issues/Kalp1774/akira?style=flat-square&color=red)](https://github.com/Kalp1774/akira/issues)
-[![Last Commit](https://img.shields.io/github/last-commit/Kalp1774/akira?style=flat-square&color=green)](https://github.com/Kalp1774/akira/commits/main)
+[![GitHub Stars](https://img.shields.io/github/stars/kalpmodi/akira?style=flat-square&color=yellow)](https://github.com/kalpmodi/akira/stargazers)
+[![GitHub Forks](https://img.shields.io/github/forks/kalpmodi/akira?style=flat-square&color=blue)](https://github.com/kalpmodi/akira/network/members)
+[![GitHub Issues](https://img.shields.io/github/issues/kalpmodi/akira?style=flat-square&color=red)](https://github.com/kalpmodi/akira/issues)
+[![Last Commit](https://img.shields.io/github/last-commit/kalpmodi/akira/dev?style=flat-square&color=green)](https://github.com/kalpmodi/akira/commits/dev)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
-[![Skills](https://img.shields.io/badge/skills-13-brightgreen?style=flat-square)](#skills)
+[![Skills](https://img.shields.io/badge/skills-16-brightgreen?style=flat-square)](#skills)
+[![Tech Files](https://img.shields.io/badge/technique_files-68-blue?style=flat-square)](#architecture)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square)](CONTRIBUTING.md)
-[![CI](https://github.com/Kalp1774/akira/actions/workflows/validate-skills.yml/badge.svg)](https://github.com/Kalp1774/akira/actions/workflows/validate-skills.yml)
+[![CI](https://github.com/kalpmodi/akira/actions/workflows/validate-skills.yml/badge.svg?branch=dev)](https://github.com/kalpmodi/akira/actions/workflows/validate-skills.yml)
 
-**[Install in 30 seconds](#install) · [Real Findings](#proof-it-works) · [Roadmap](#roadmap) · [Wiki](../../wiki)**
+> **You are on the `dev` branch** - this is the latest architecture. The `main` branch has the stable release.
+
+**[Install in 30 seconds](#install) · [Real Findings](#proof-it-works) · [Architecture](#architecture) · [Roadmap](#roadmap)**
 
 </div>
 
@@ -29,24 +32,108 @@ No server. No 40-tool pre-install hell. No hallucinated findings. Every finding 
 /plan-engagement → /recon → /secrets → /exploit → /zerodayhunt → /triage → /report
 ```
 
-### Attack Graph Engine
+---
 
-Akira v1.0.2 replaces the static phase chain with a live attack graph. The AI generates ranked hypotheses before any tool runs, then calibrates them in real-time as skills emit typed signals. When a new attack surface is discovered mid-engagement, a fork spawns automatically instead of abandoning the current thread:
+## What's New in Dev (Basilisk v1.1.0)
+
+### Thin Router + Technique Library Architecture
+
+The biggest internal upgrade since launch. Every large skill has been split into a **thin router** (~180 lines) and a **technique library** of focused per-technique files (~80 lines each).
+
+**Before:** Invoking `/zerodayhunt` loaded all 1843 lines into context - even when you only needed SSRF.
+
+**After:** The router reads Phase 0 intel, builds a manifest, then loads only the relevant technique files. An SSRF hunt loads ~460 lines instead of 1843. **75% token reduction per session.**
 
 ```
-Main thread:   /exploit api.target.com       (continues)
-Fork spawned:  /recon   internal.target.com  (SSRF pivot discovered)
-Fork spawned:  /secrets new-bundle.abc123.js (JS bundle found)
+skills/
+├── _shared/
+│   ├── phase0.sh       ← canonical session state, intel relay, memory read
+│   └── signals.sh      ← atomic append-only signal emission (race-proof)
+│
+├── zerodayhunt/
+│   ├── SKILL.md        ← 179-line router (was 1843 lines)
+│   └── tech/           ← 20 technique files, loaded on demand
+│       ├── ssrf-oob.md
+│       ├── chain-blueprints.md
+│       ├── jwt-saml-sso.md
+│       └── ...
 ```
 
-Every skill shares a live `session.json` signal bus. `TECH_DETECTED(AWS)` from recon immediately boosts the SSRF→IAM hypothesis in exploit. `CRED_FOUND` from secrets instantly propagates to all active threads. Confirmed findings write to `report_draft` in real-time - `/report` just formats, not discovers.
+### New Skills
+- `/redteam` - Full red team: initial access, lateral movement, AD exploitation, C2, persistence, cloud APT, exfil, opsec
+- `/compact` - Compresses `session.json` when it grows large mid-engagement
+
+### Phase 0 Unified
+All 15 skills now source `_shared/phase0.sh` instead of duplicated bash blocks. Intel relay is consistent across every skill - recon findings flow automatically into exploit, cloud-audit, zerodayhunt without manual re-input.
+
+---
+
+## Architecture
+
+```
+skills/
+│
+├── _shared/                    canonical shared libraries
+│   ├── phase0.sh               session state, intel relay, memory read
+│   └── signals.sh              append-only signals.jsonl
+│
+├── THIN ROUTER SKILLS (router + tech/ library)
+│   ├── recon/         119-line router + 14 technique files
+│   ├── exploit/       234-line router + 20 technique files
+│   ├── redteam/       207-line router + 14 technique files
+│   └── zerodayhunt/   179-line router + 20 technique files
+│
+├── SINGLE-FILE SKILLS (Phase 0 sources _shared)
+│   ├── secrets/        cloud-aware credential hunting
+│   ├── cloud-audit/    AWS + GCP + Azure + K8s
+│   ├── 403-bypass/     29+ bypass techniques
+│   ├── oauth-attacks/  OAuth 2.0 + OIDC exploitation
+│   └── race-conditions/ HTTP/2 single-packet attack
+│
+├── ORCHESTRATION SKILLS
+│   ├── plan-engagement/ hypothesis engine + state machine
+│   ├── triage/          severity clustering + ATW write-back to memory
+│   └── report/          formats pre-filled report_draft
+│
+└── ISOLATED
+    ├── ctf/             HackTheBox / TryHackMe - fully isolated
+    └── compact/         session.json compression
+```
+
+### How a Session Flows
+
+```
+/plan-engagement target.com
+    writes session.json, sets state=WIDE, generates ranked hypotheses
+
+/recon target.com
+    router loads 3-5 technique files from recon/tech/
+    emits SURFACE_FOUND + TECH_DETECTED signals
+    writes intel relay to session.json
+
+/secrets target.com
+    reads recon relay -> targeted credential hunt
+    AWS key found -> triggers cloud-audit fork automatically
+
+/zerodayhunt target.com
+    router reads ALL prior relays
+    reprioritizes manifest: AWS+SSRF -> loads ssrf-oob.md + chain-blueprints.md
+    only ~460 lines loaded vs 1843 before
+
+/triage target.com
+    certifies findings
+    writes ATW (dead techniques) back to memory - skipped in future engagements
+
+/report target.com
+    formats pre-filled report_draft - findings written on confirmation, not here
+```
 
 ---
 
 ## Install
 
 ```bash
-git clone https://github.com/Kalp1774/akira
+git clone https://github.com/kalpmodi/akira
 cd akira && bash install.sh
 ```
 
@@ -64,46 +151,60 @@ Full installation guide and platform setup in the [Wiki - Installation](../../wi
 
 ## Skills
 
-Full technique details and examples in the [Wiki - Skills](../../wiki/Skills).
-
 ### Core 7-Phase Lifecycle
 
 | Skill | Phase | What It Does |
 |---|---|---|
-| `/plan-engagement` | 0 | Inference-first init: generates ranked hypotheses, signal bus, WIDE/DEEP/HARVEST/WRAP state machine, fork scheduler |
-| `/recon` | 1 | 23-step pipeline - hypothesis-driven step ordering, emits SURFACE_FOUND + TECH_DETECTED + WAF_CONFIRMED signals |
-| `/secrets` | 2 | Hypothesis-targeted scanning - emits CRED_FOUND/JWT_FOUND, AWS key triggers cloud-audit fork automatically |
-| `/exploit` | 3 | Tests top-probability hypothesis first - emits SSRF_VECTOR/VULN_CONFIRMED, writes report_draft on confirmation |
-| `/zerodayhunt` | 3+ | JWT confusion, SSRF->IAM, WAF bypass, type juggling |
-| `/triage` | 4 | Severity clustering, confidence scoring (0-100), FP gate |
-| `/report` | 5 | Formats pre-filled report_draft - findings already written by exploit/zerodayhunt on confirmation |
+| `/plan-engagement` | 0 | Inference-first init: ranked hypotheses, signal bus, WIDE/DEEP/HARVEST/WRAP state machine, fork scheduler |
+| `/recon` | 1 | 23-step pipeline across 14 technique files - hypothesis-driven ordering, emits SURFACE_FOUND + TECH_DETECTED + WAF_CONFIRMED |
+| `/secrets` | 2 | Hypothesis-targeted credential scan - CRED_FOUND/JWT_FOUND, AWS key triggers cloud-audit fork |
+| `/exploit` | 3 | 20 technique files - tests top-probability hypothesis first, writes report_draft on confirmation |
+| `/zerodayhunt` | 3+ | 20 technique files - 32 phases: JWT confusion, SSRF->IAM, WAF bypass, chain blueprints, conference-grade attacks |
+| `/triage` | 4 | Severity clustering, confidence scoring (0-100), FP gate, ATW write-back |
+| `/report` | 5 | Formats pre-filled report_draft - findings already written by exploit/zerodayhunt |
 
 ### Specialized Attack Modules
 
-Full attack technique walkthroughs in the [Wiki - Attack Techniques](../../wiki/Attack-Techniques).
+| Skill | Technique Files | What It Does |
+|---|---|---|
+| `/redteam` | 14 | Initial access, lateral movement, AD exploitation, C2 frameworks, persistence, cloud APT, exfil, OPSEC |
+| `/403-bypass` | - | 29+ techniques: header tricks, parser confusion, Orange Tsai `?` ACL bypass (BH2024), CVE-2025-32094 |
+| `/oauth-attacks` | - | Redirect URI bypass, CSRF, PKCE downgrade, JWT confusion chains |
+| `/race-conditions` | - | HTTP/2 single-packet attack, coupon reuse, double-spend, OTP bypass |
+| `/cloud-audit` | - | AWS SSRF->IAM, S3 enum, GCP, Azure, K8s unauthenticated API |
+| `/ctf` | - | HackTheBox/TryHackMe - web/crypto/pwn/RE/forensics/OSINT/stego - fully isolated |
+| `/compact` | - | Compresses session.json when context grows large mid-engagement |
 
-| Skill | What It Does |
-|---|---|
-| `/403-bypass` | 29+ techniques: header tricks, parser confusion, BreakingWAF, Orange Tsai `?` ACL bypass (BH2024), CVE-2025-32094, CVE-2026-34950, JSON body path traversal |
-| `/ad-attacks` | BloodHound, Kerberoasting, DCSync, Golden/Silver Ticket, ADCS ESC1-8 |
-| `/oauth-attacks` | Redirect URI bypass, CSRF, PKCE downgrade, JWT confusion |
-| `/race-conditions` | HTTP/2 single-packet attack, coupon reuse, double-spend, OTP bypass |
-| `/cloud-audit` | AWS SSRF->IAM, S3 enum, GCP, Azure, K8s unauthenticated API |
-| `/ctf` | HackTheBox/TryHackMe - web/crypto/pwn/RE/forensics/OSINT/stego |
+### Technique Coverage Highlights
+
+| Technique | File | Reference |
+|---|---|---|
+| SSRF + Blind OOB chain | `ssrf-oob.md` | Phase 8, 32 |
+| JWT RS256->HS256 confusion | `jwt-saml-sso.md` | Phase 7, 31 |
+| Prototype pollution -> EJS RCE | `client-proto.md` | USENIX 2023 |
+| mXSS DOMPurify bypass | `client-proto.md` | CVE-2024-47875 |
+| PDF generator SSRF -> AWS IAM | `file-crypto.md` | Phase 26 |
+| ECDSA nonce reuse + Psychic Signatures | `file-crypto.md` | CVE-2022-21449 |
+| Chain blueprints A-K | `chain-blueprints.md` | Phase 23 |
+| ImageMagick arbitrary file read | `file-crypto.md` | CVE-2022-44268 |
+| CI/CD pull_request_target RCE | `cicd.md` | Phase 16 |
+| XS-Leaks cache probing | `xs-leaks.md` | DEF CON 29 |
+| HTTP Desync CL.0 + H2.CL | `admin-infra.md` | Black Hat 2022 |
+| Nginx alias off-by-slash traversal | `admin-infra.md` | Phase 28 |
 
 ---
 
 ## Proof It Works
 
-Real anonymized findings made with Akira. Findings are anonymized per responsible disclosure. Details shared privately.
+Real anonymized findings made with Akira. Details shared privately per responsible disclosure.
 
 | # | Type | Severity | Bounty | Skill Chain |
 |---|---|---|---|---|
-| 1 | SSRF → AWS IAM Credential Extraction | Critical | $2,500 | `/recon` → `/exploit` → `/cloud-audit` |
-| 2 | OAuth Open Redirect → Auth Code Interception | Critical | $1,800 | `/recon` → `/oauth-attacks` |
+| 1 | SSRF -> AWS IAM Credential Extraction | Critical | $2,500 | `/recon` -> `/exploit` -> `/cloud-audit` |
+| 2 | OAuth Open Redirect -> Auth Code Interception | Critical | $1,800 | `/recon` -> `/oauth-attacks` |
 | 3 | Race Condition: Coupon Applied 7x | High | $800 | `/race-conditions` |
 | 4 | Strapi SSRF Bypass + MIME Fail-Open (CVE filed) | Critical | - | `/zerodayhunt` |
-| 5 | JWT RS256→HS256 Confusion → Admin Access | Critical | $1,500 | `/zerodayhunt` |
+| 5 | JWT RS256->HS256 Confusion -> Admin Access | Critical | $1,500 | `/zerodayhunt` |
 
 ---
 
@@ -115,11 +216,13 @@ Real anonymized findings made with Akira. Findings are anonymized per responsibl
 | Phase artifact handoffs (session.json) | - | - | **YES** |
 | Anti-hallucination evidence gate | - | - | **YES** |
 | Confidence scoring per finding (0-100) | - | - | **YES** |
-| **Attack graph engine (dynamic fork scheduling)** | - | - | **YES** |
-| **Hypothesis engine (ranked attack chains, real-time calibration)** | - | - | **YES** |
-| **Signal bus + cross-skill correlation** | - | - | **YES** |
-| **Live report draft (pre-filled on finding confirmation)** | - | - | **YES** |
-| AD full chain (BloodHound → DCSync) | - | Partial | **YES** |
+| Attack graph engine (dynamic fork scheduling) | - | - | **YES** |
+| Hypothesis engine (ranked chains, real-time calibration) | - | - | **YES** |
+| Signal bus + cross-skill correlation | - | - | **YES** |
+| **Thin router + technique library (75% token reduction)** | - | - | **YES** |
+| **Unified Phase 0 (intel relay across all skills)** | - | - | **YES** |
+| Red team full chain (initial access -> exfil -> OPSEC) | - | Partial | **YES** |
+| AD full chain (BloodHound -> DCSync -> ADCS ESC1-8) | - | Partial | **YES** |
 | 403 bypass (29+ techniques, conference-grade 2024-2026) | - | - | **YES** |
 | OAuth/OIDC exploitation suite | - | - | **YES** |
 | Race conditions (single-packet attack) | - | - | **YES** |
@@ -132,17 +235,15 @@ Real anonymized findings made with Akira. Findings are anonymized per responsibl
 
 ## Roadmap
 
-See the full roadmap in the [Wiki](../../wiki/Roadmap).
-
-| Release | ETA | New Skills |
+| Release | Status | Highlights |
 |---|---|---|
-| **Hydra v1.0.0** | Shipped | 12 core skills |
+| **Hydra v1.0.0** | Shipped | 12 core skills, 6-phase lifecycle |
 | **Hydra v1.0.1** | Shipped | `403-bypass` + recon 23-step upgrade |
-| **Hydra v1.0.2** | Shipped | Attack Graph Engine - hypothesis engine, signal bus, fork scheduler, WIDE/DEEP/HARVEST/WRAP state machine |
-| Basilisk v1.1.0 | Month 2 | `graphql`, `deserialization`, `prototype-pollution`, `supply-chain`, `ci-cd-audit` |
-| Raven v1.2.0 | Month 3 | Akira Context Engine, `cache-attacks`, `csp-bypass` |
-| Phantom v1.3.0 | Month 4 | `mobile`, `burp-integration` |
-| Leviathan v2.0.0 | Month 6 | Akira Brain, `postmap-recon`, `red-team` |
+| **Hydra v1.0.2** | Shipped | Attack Graph Engine - hypothesis engine, signal bus, fork scheduler |
+| **Basilisk v1.1.0** | Dev branch | Thin router + technique library, 68 technique files, `/redteam`, unified Phase 0, race-proof signals |
+| Raven v1.2.0 | Month 2 | Akira Context Engine, `cache-attacks`, `csp-bypass`, `graphql` standalone skill |
+| Phantom v1.3.0 | Month 3 | `mobile` deep-dive, `burp-integration`, WASM analysis automation |
+| Leviathan v2.0.0 | Month 6 | Akira Brain - autonomous multi-skill orchestration, `postmap-recon` |
 
 ---
 
@@ -150,7 +251,9 @@ See the full roadmap in the [Wiki](../../wiki/Roadmap).
 
 Found a technique that belongs in Akira? Fix a skill bug? Submit a real finding?
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) and the [Wiki - Contributing](../../wiki/Contributing) - PRs welcome, fast review.
+Each technique file in `tech/` is ~80 lines and self-contained - adding a new attack vector is now a single file PR instead of editing a 1800-line monolith.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) - PRs welcome, fast review.
 
 ---
 
@@ -166,6 +269,6 @@ Unauthorized testing is illegal. Authors not responsible for misuse.
 
 Built for bug hunters, by bug hunters.
 
-**[Star this repo](https://github.com/Kalp1774/akira) to stay updated when new skills ship.**
+**[Star this repo](https://github.com/kalpmodi/akira) to stay updated when new skills ship.**
 
 </div>

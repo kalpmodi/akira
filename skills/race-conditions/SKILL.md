@@ -17,6 +17,67 @@ Never claim a race condition without repeatable proof - screenshot or log showin
 
 ---
 
+## Phase 0: Smart Intake
+
+```bash
+source ~/.claude/skills/_shared/phase0.sh
+source ~/.claude/skills/_shared/signals.sh
+
+p0_init_vars "$1"
+p0_state_gate "HARVEST" || exit 0
+p0_read_relay recon exploit
+p0_read_memory
+p0_read_hypotheses
+
+# Narrow endpoints to race-relevant paths
+RACE_TARGETS=$(echo "$INTERESTING_ENDPOINTS" | grep -iE "coupon|promo|voucher|redeem|claim|bonus|reward|withdraw|transfer|wallet|checkout|order|cart|limit|rate|reset|verify|otp" | head -20)
+WAYBACK_ENDPOINTS=$(echo "$WAYBACK_ENDPOINTS" | grep -iE "coupon|redeem|transfer|withdraw|claim" | head -10)
+TECH_STACK=$KNOWN_TECH
+HTTP2_LIKELY=$(echo "$TECH_STACK" | grep -qi "nginx\|cloudflare\|h2\|http/2" && echo true || echo false)
+
+echo "=== PHASE 0 RACE CONDITIONS INTAKE: $TARGET ==="
+echo "State: $STATE | HTTP/2 likely: $HTTP2_LIKELY"
+echo "Race-relevant endpoints found in recon: $(echo "$RACE_TARGETS" | grep -c . 2>/dev/null || echo 0)"
+echo "Race targets: $RACE_TARGETS"
+echo "ATW flagged (avoid): ${ATW_FLAGGED:-none}"
+```
+
+### Execution Manifest
+
+One manifest item per endpoint type found. Do not run generic "test everything" - target specific endpoints extracted from recon.
+
+```bash
+# Build items dynamically based on RACE_TARGETS found above.
+# Template - replace <endpoint> with actual URLs from RACE_TARGETS.
+
+MANIFEST=$(cat << 'MANIFEST_EOF'
+{
+  "phase": "race-conditions",
+  "generated_at": "YYYY-MM-DD HH:MM",
+  "items": [
+    {"id":"rc01","tool":"single-packet-race","target":"<coupon/redeem endpoint from recon>","reason":"coupon reuse = direct financial impact","priority":"MUST","status":"pending","skip_reason":"set to skipped if no coupon endpoint found"},
+    {"id":"rc02","tool":"single-packet-race","target":"<wallet/transfer endpoint from recon>","reason":"double-spend = critical financial impact","priority":"MUST","status":"pending","skip_reason":"set to skipped if no wallet endpoint found"},
+    {"id":"rc03","tool":"single-packet-race","target":"<otp/reset endpoint from recon>","reason":"rate limit bypass -> OTP brute force","priority":"SHOULD","status":"pending","skip_reason":"set to skipped if no OTP endpoint found"},
+    {"id":"rc04","tool":"endpoint-discovery","target":"<target>/api","reason":"find limit-enforcement endpoints not in recon intel","priority":"MUST","status":"pending","skip_reason":null},
+    {"id":"rc05","tool":"single-packet-race","target":"<checkout/order endpoint>","reason":"buy more than available qty","priority":"SHOULD","status":"pending","skip_reason":"set to skipped if no checkout endpoint found"},
+    {"id":"rc06","tool":"toctou-file-race","target":"<file upload endpoint>","reason":"AV scan window = malicious file delivery","priority":"IF_TIME","status":"pending","skip_reason":"skip if no file upload surface found"}
+  ]
+}
+MANIFEST_EOF
+)
+
+jq --argjson m "$MANIFEST" '.scalpel.active_manifest = $m' $SESSION > /tmp/s.json && mv /tmp/s.json $SESSION
+```
+
+**Manifest adjustment rules:**
+- If `RACE_TARGETS` contains coupon/redeem URLs: set rc01 target to those exact URLs
+- If `RACE_TARGETS` contains wallet/transfer URLs: set rc02 target to those exact URLs
+- If `RACE_TARGETS` is empty: rc01, rc02, rc05 remain pending but rc04 becomes MUST (discover endpoints first)
+- If `HTTP2_LIKELY=false`: note that single-packet attack may require Burp Turbo Intruder fallback (Phase 3)
+- If `STATE=DEEP` and existing confirmed vuln is financial: rc04, rc06 become IF_TIME only
+
+---
+
 ## Phase 1 - Identify Race Condition Targets
 
 **High-value targets - always test these first:**
@@ -360,3 +421,17 @@ confirmed-vulnerable | potential | no-findings
 ```
 
 Tell user: "Race condition phase complete. `interesting_race-conditions.md` written. Key finding: <one-liner>. Run `/triage <target>` to aggregate."
+
+---
+
+## Phase-End: Completion Gate
+
+```bash
+PENDING_MUST=$(jq '[.scalpel.active_manifest.items[] | select(.priority=="MUST" and .status=="pending")] | length' $SESSION 2>/dev/null || echo 0)
+if [ "$PENDING_MUST" -gt 0 ]; then
+  echo "=== COMPLETION GATE BLOCKED ==="
+  echo "$PENDING_MUST MUST items not completed:"
+  jq '.scalpel.active_manifest.items[] | select(.priority=="MUST" and .status=="pending") | "\(.id): \(.tool) on \(.target)"' $SESSION
+  echo "Run them or mark skipped with explicit reason before calling /triage."
+fi
+```

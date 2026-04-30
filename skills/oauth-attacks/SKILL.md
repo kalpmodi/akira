@@ -16,6 +16,65 @@ Never claim "account takeover" without demonstrating actual token receipt for an
 
 ---
 
+## Phase 0: Smart Intake
+
+```bash
+source ~/.claude/skills/_shared/phase0.sh
+source ~/.claude/skills/_shared/signals.sh
+
+p0_init_vars "$1"
+p0_state_gate "HARVEST" || exit 0
+p0_read_relay recon secrets
+p0_read_memory
+p0_read_hypotheses
+
+# Narrow endpoints + wayback to OAuth-relevant paths
+INTERESTING_ENDPOINTS=$(echo "$INTERESTING_ENDPOINTS" | grep -i "oauth\|auth\|login\|sso\|connect\|token\|authorize" | head -20)
+WAYBACK_ENDPOINTS=$(echo "$WAYBACK_ENDPOINTS" | grep -i "oauth\|auth\|token" | head -10)
+JWT_COUNT=$(echo "$JWT_TOKENS" | grep -c "ey" 2>/dev/null || echo 0)
+TECH_STACK=$KNOWN_TECH
+
+echo "=== PHASE 0 OAUTH INTAKE: $TARGET ==="
+echo "State: $STATE | JWT tokens already found: $JWT_COUNT"
+echo "OAuth-related endpoints from recon: $(echo "$INTERESTING_ENDPOINTS" | wc -l)"
+echo "Tech stack: $TECH_STACK"
+echo "Top hypothesis: $TOP_HYPO_LABEL [$TOP_HYPO_PROB%]"
+echo "ATW flagged (avoid): ${ATW_FLAGGED:-none}"
+```
+
+### Execution Manifest
+
+```bash
+MANIFEST=$(cat << 'MANIFEST_EOF'
+{
+  "phase": "oauth-attacks",
+  "generated_at": "YYYY-MM-DD HH:MM",
+  "items": [
+    {"id":"o01","tool":"oidc-discovery","target":"<target>/.well-known/openid-configuration","reason":"enumerate all OAuth endpoints + supported flows","priority":"MUST","status":"pending","skip_reason":null},
+    {"id":"o02","tool":"redirect-uri-bypass","target":"<oauth-authorize-endpoint>","reason":"code interception via loose redirect_uri validation","priority":"MUST","status":"pending","skip_reason":null},
+    {"id":"o03","tool":"state-csrf-test","target":"<oauth-callback-endpoint>","reason":"missing/bypassable state = CSRF account linking","priority":"MUST","status":"pending","skip_reason":null},
+    {"id":"o04","tool":"pkce-downgrade","target":"<oauth-authorize-endpoint>","reason":"PKCE not enforced = code interception without verifier","priority":"MUST","status":"pending","skip_reason":null},
+    {"id":"o05","tool":"jwt-claim-attack","target":"<access-token>","reason":"alg:none / RS256->HS256 confusion on OAuth tokens","priority":"MUST","status":"pending","skip_reason":"set to skipped if no JWT tokens found"},
+    {"id":"o06","tool":"token-leakage-referer","target":"<oauth-callback-page>","reason":"auth code in Referer to third-party analytics","priority":"SHOULD","status":"pending","skip_reason":null},
+    {"id":"o07","tool":"open-redirect-chain","target":"<target> redirectors","reason":"find open redirect + chain with redirect_uri bypass","priority":"MUST","status":"pending","skip_reason":null},
+    {"id":"o08","tool":"scope-escalation","target":"<token-endpoint>","reason":"request read scope, check if write/admin included","priority":"SHOULD","status":"pending","skip_reason":null},
+    {"id":"o09","tool":"jwks-uri-hijack","target":"<jku-claim-in-token>","reason":"attacker-controlled JWKS = forge any token","priority":"IF_TIME","status":"pending","skip_reason":"skip if no jku claim in token header"}
+  ]
+}
+MANIFEST_EOF
+)
+
+jq --argjson m "$MANIFEST" '.scalpel.active_manifest = $m' $SESSION > /tmp/s.json && mv /tmp/s.json $SESSION
+```
+
+**Manifest adjustment rules:**
+- If `JWT_COUNT=0` (no JWT tokens found in secrets phase): mark o05, o09 as `skipped` - run them only after o01 discovers tokens
+- If `INTERESTING_ENDPOINTS` has specific OAuth provider URLs: update o01 target to those specific URLs
+- If `STATE=DEEP` and top hypothesis is JWT-related: mark o02, o03, o06, o08 as `IF_TIME`; promote o05 to MUST
+- If top hypothesis is account takeover chain: promote o07 (open redirect) to MUST first
+
+---
+
 ## Phase 1 - OAuth Endpoint Discovery
 
 ```bash
@@ -339,3 +398,17 @@ account-takeover | token-leaked | partial | no-findings
 ```
 
 Tell user: "OAuth attack phase complete. `interesting_oauth-attacks.md` written. Key finding: <one-liner>. Run `/triage <target>` to aggregate."
+
+---
+
+## Phase-End: Completion Gate
+
+```bash
+PENDING_MUST=$(jq '[.scalpel.active_manifest.items[] | select(.priority=="MUST" and .status=="pending")] | length' $SESSION 2>/dev/null || echo 0)
+if [ "$PENDING_MUST" -gt 0 ]; then
+  echo "=== COMPLETION GATE BLOCKED ==="
+  echo "$PENDING_MUST MUST items not completed:"
+  jq '.scalpel.active_manifest.items[] | select(.priority=="MUST" and .status=="pending") | "\(.id): \(.tool) on \(.target)"' $SESSION
+  echo "Run them or mark skipped with explicit reason before calling /triage."
+fi
+```

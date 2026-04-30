@@ -16,6 +16,63 @@ Never claim "cloud compromise" without demonstrating actual data access with rea
 
 ---
 
+## Phase 0: Smart Intake
+
+```bash
+source ~/.claude/skills/_shared/phase0.sh
+source ~/.claude/skills/_shared/signals.sh
+
+p0_init_vars "$1"
+p0_state_gate "HARVEST" || exit 0
+p0_read_relay recon secrets exploit
+p0_read_memory
+p0_read_hypotheses
+
+AWS_KEYS=$AWS_KEYS_FOUND  # alias to match downstream references
+
+echo "=== PHASE 0 CLOUD-AUDIT INTAKE: $TARGET ==="
+echo "State: $STATE"
+echo "AWS keys found: $AWS_KEYS | SSRF vectors: $(echo "$SSRF_VECTORS" | wc -l)"
+echo "AWS/GCP/Azure hints: $AWS_HINT/$GCP_HINT/$AZURE_HINT"
+echo "ATW flagged (avoid): ${ATW_FLAGGED:-none}"
+```
+
+### Execution Manifest
+
+```bash
+# Manifest is dynamic: only include phases for confirmed cloud providers
+# MUST items = confirmed via prior intel. SHOULD = hinted. IF_TIME = speculative.
+
+MANIFEST=$(cat << 'MANIFEST_EOF'
+{
+  "phase": "cloud-audit",
+  "generated_at": "YYYY-MM-DD HH:MM",
+  "items": [
+    {"id":"c01","tool":"cloud-footprint-discovery","target":"<target>","reason":"identify cloud provider from DNS/headers","priority":"MUST","status":"pending","skip_reason":null},
+    {"id":"c02","tool":"s3-bucket-enum","target":"<target-brand>","reason":"find exposed S3/GCS/Azure blob buckets","priority":"MUST","status":"pending","skip_reason":null},
+    {"id":"c03","tool":"imds-ssrf","target":"<ssrf-endpoint-from-exploit-relay>","reason":"SSRF->IMDS credential theft if SSRF_VECTORS found","priority":"MUST","status":"pending","skip_reason":"set to skipped if no SSRF_VECTORS"},
+    {"id":"c04","tool":"aws-iam-enum","target":"credentials from SSRF or secrets","reason":"enumerate IAM permissions, privesc paths","priority":"MUST","status":"pending","skip_reason":"set to skipped if no AWS credentials"},
+    {"id":"c05","tool":"aws-data-exfil","target":"S3/SecretsManager/SSM/Lambda","reason":"extract actual sensitive data to prove impact","priority":"MUST","status":"pending","skip_reason":null},
+    {"id":"c06","tool":"gcp-metadata-enum","target":"<ssrf-endpoint>","reason":"GCP SA token via metadata if GCP_HINT=true","priority":"SHOULD","status":"pending","skip_reason":"skip if GCP_HINT=false"},
+    {"id":"c07","tool":"azure-imds","target":"<ssrf-endpoint>","reason":"Azure managed identity token if AZURE_HINT=true","priority":"SHOULD","status":"pending","skip_reason":"skip if AZURE_HINT=false"},
+    {"id":"c08","tool":"k8s-api-probe","target":"<live-hosts>:6443","reason":"exposed K8s API server","priority":"IF_TIME","status":"pending","skip_reason":null},
+    {"id":"c09","tool":"cloud-misconfiguration-checklist","target":"<account>","reason":"IAM wildcard, SGgroups, CloudTrail disabled","priority":"SHOULD","status":"pending","skip_reason":null}
+  ]
+}
+MANIFEST_EOF
+)
+
+jq --argjson m "$MANIFEST" '.scalpel.active_manifest = $m' $SESSION > /tmp/s.json && mv /tmp/s.json $SESSION
+```
+
+**Manifest adjustment rules:**
+- If `AWS_KEYS=false` AND `SSRF_VECTORS` empty: mark c03, c04 as `skipped` ("no SSRF or keys to work with")
+- If `GCP_HINT=false`: mark c06 as `skipped`
+- If `AZURE_HINT=false`: mark c07 as `skipped`
+- If `STATE=DEEP`: mark c08 as `skipped`
+
+---
+
 ## Phase 1 - Pre-Engagement: Discover Cloud Footprint
 
 ```bash
@@ -419,3 +476,42 @@ AWS / GCP / Azure / Multi-cloud
 ```
 
 Tell user: "Cloud audit complete. `interesting_cloud-audit.md` written. Key finding: <one-liner>. Run `/triage <target>` to aggregate."
+
+---
+
+## Phase-End Protocol
+
+### Completion Gate
+
+```bash
+PENDING_MUST=$(jq '[.scalpel.active_manifest.items[] | select(.priority=="MUST" and .status=="pending")] | length' $SESSION 2>/dev/null || echo 0)
+if [ "$PENDING_MUST" -gt 0 ]; then
+  echo "=== COMPLETION GATE BLOCKED ==="
+  echo "$PENDING_MUST MUST items not completed:"
+  jq '.scalpel.active_manifest.items[] | select(.priority=="MUST" and .status=="pending") | "\(.id): \(.tool) on \(.target)"' $SESSION
+  echo "Run them now or skip with explicit reason before proceeding."
+fi
+```
+
+### Intel Relay Write
+
+```bash
+# Emit structured handoff for zerodayhunt + report phases
+CLOUD_CREDS_JSON=$(jq -r '.intel.credentials[]? | select(.type | test("aws|gcp|azure";"i")) | {type:.type,value:.value}' $SESSION | jq -s . 2>/dev/null || echo "[]")
+DATA_ACCESSED=$(jq -r '.report_draft.findings[]? | select(.status=="confirmed") | .title' $SESSION | jq -R . | jq -s . 2>/dev/null || echo "[]")
+PRIV_ESC=$(jq -r '.report_draft.findings[]? | select(.vuln_class | test("priv.*esc|iam";"i")) | .title' $SESSION | head -1 | jq -R . 2>/dev/null || echo "null")
+
+jq --argjson creds "$CLOUD_CREDS_JSON" \
+   --argjson data "$DATA_ACCESSED" \
+   --argjson privesc "$PRIV_ESC" \
+   '.intel_relay.from_cloud_audit = {
+     "cloud_credentials": $creds,
+     "data_accessed": $data,
+     "privesc_confirmed": ($privesc != null),
+     "privesc_path": $privesc
+   } |
+   .threads[0].phase = "triage"' \
+   $SESSION > /tmp/s.json && mv /tmp/s.json $SESSION
+
+echo "Intel relay written. Run /triage $TARGET."
+```

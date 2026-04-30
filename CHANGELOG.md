@@ -5,6 +5,37 @@ Each version is named after a creature, animal, or mythical legend based on its 
 
 ---
 
+## [Hydra - v1.0.1] - 2026-04-21
+
+*13 heads now. The hydra grew one more.*
+
+Patch release adding a new specialized skill and upgrading recon to full conference-grade coverage.
+
+### Added
+- `403-bypass` - new specialized skill with 29+ techniques across 5 priority layers
+  - Layer 1: IP spoofing headers, hop-by-hop stripping, URL rewrite headers (X-Original-URL)
+  - Layer 2: path manipulation, double URL encoding (DEF CON 2024), Unicode normalization, Nginx off-by-slash
+  - Layer 3: H2C smuggling, CL.TE/TE.CL request smuggling, JWT algorithm confusion
+  - Layer 4: IIS tilde/ADS, prototype pollution, mass assignment, host header tricks, port ACL gaps
+  - Layer 5: automated sweep (nomore403, 403-Bypasser, nuclei templates)
+  - **2024-2026 research:** Apache `?` ACL bypass - Orange Tsai Confusion Attacks (Black Hat USA 2024)
+  - **2024-2026 research:** CVE-2025-32094 - OPTIONS + obsolete line folding smuggling (Akamai, James Kettle BH2025)
+  - **2024-2026 research:** BreakingWAF - CDN/WAF misconfiguration origin IP bypass (Zafran Dec 2024, affects 40% of Fortune 100)
+  - **2024-2026 research:** CVE-2026-34950 - fast-jwt whitespace-prefix RSA key confusion (CVSS 9.1)
+  - **2024-2026 research:** JSON body path traversal WAF bypass
+
+### Upgraded
+- `recon` - rewritten from 71-line script wrapper to full 23-step conference-grade pipeline
+  - **Step 16:** AXFR zone transfer against ALL nameservers (forgotten NS often still allow it)
+  - **Step 17:** Passive DNS historical intel - SecurityTrails + Farsight DNSDB (100B+ records) + VirusTotal graph pivot
+  - **Step 18:** Advanced scanner queries - FOFA full-text HTML, Netlas, LeakIX, Criminal IP, ZoomEye
+  - **Step 19:** JARM/JA4+ TLS fingerprinting for infrastructure correlation and CDN origin bypass
+  - **Step 20:** Supply chain recon - dependency confusion (Alex Birsan technique), source map mining, npm/PyPI unclaimed check
+  - **Step 21:** Wayback CDX API advanced mining - collapse=urlkey, statuscode filters, shadow endpoints
+  - **Step 22:** reconFTW orchestration - 50+ tool automated pipeline
+
+---
+
 ## [Hydra - v1.0.0] - 2026-04-16
 
 *12 heads. 12 skills. The full attack chain.*

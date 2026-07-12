@@ -29,6 +29,7 @@ MARKDOWN_GLOBS = [
 
 LINK_RE = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
 BASH_BLOCK_RE = re.compile(r"```bash\n(.*?)\n```", re.DOTALL)
+FENCED_CODE_RE = re.compile(r"```.*?```", re.DOTALL)
 
 
 def fail(msg: str) -> None:
@@ -143,7 +144,8 @@ def check_links() -> None:
     missing: list[str] = []
     for md in sorted(markdown_files):
         text = md.read_text(encoding="utf-8")
-        for _, raw_link in LINK_RE.findall(text):
+        text_for_links = FENCED_CODE_RE.sub("", text)
+        for _, raw_link in LINK_RE.findall(text_for_links):
             link = raw_link.strip()
             if is_external_or_anchor(link):
                 continue

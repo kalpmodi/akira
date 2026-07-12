@@ -7,6 +7,25 @@ No CLA. No corporate process. Just open a PR.
 
 ## Ways to Contribute
 
+## First Contribution Path (Recommended)
+
+If this is your first PR, use this flow:
+
+1. Pick one target:
+   - a typo/outdated command in `skills/<skill-name>/SKILL.md`
+   - a technique improvement in `skills/*/tech/*.md`
+   - a docs update in `README.md`, `INSTALL.md`, or `docs/`
+2. Make your change and keep it scoped to one topic.
+3. Run local validation from repo root:
+   - `python3 .github/scripts/validate_repo_quality.py`
+   - `bash -n install.sh bootstrap.sh skills/_shared/phase0.sh skills/_shared/signals.sh`
+4. Confirm evidence requirements:
+   - include exact HTTP request/response for confirmed findings
+   - clearly separate confirmed vs potential findings
+5. Open a PR and complete `.github/PULL_REQUEST_TEMPLATE.md`.
+
+---
+
 ### 1. Fix a Skill Bug
 A skill claimed a finding without evidence? Missed something obvious? Gave wrong tool syntax?
 

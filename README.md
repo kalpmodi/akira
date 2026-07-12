@@ -63,7 +63,7 @@ An AI pentest co-pilot that runs natively inside Claude Code, Gemini CLI, Cursor
          ▲ source                  ▲ source
          │                        │
 ┌────────┴──────────┐   ┌─────────┴────────────────────────────────┐
-│  Thin Router      │   │  Technique Library (tech/*.md)            │
+│  Thin Router      │   │  Technique Library (skills/*/tech/*.md)   │
 │  SKILL.md         │   │  loaded on demand via manifest priority   │
 │  ~180 lines       │   │  ~80 lines each                           │
 │  - Phase 0        │   │  ssrf-oob.md | jwt-saml-sso.md           │
@@ -507,7 +507,7 @@ Open Claude Code, type `/plan-engagement target.com`.
 | Hydra v1.0.0 | Shipped | 12 core skills, session.json bus, 6-phase lifecycle |
 | Hydra v1.0.1 | Shipped | `403-bypass`, recon 23-step pipeline |
 | Hydra v1.0.2 | Shipped | Hypothesis engine, signal bus, fork scheduler, state machine |
-| **Basilisk v1.1.0** | **Dev** | Thin router + technique library, 68 tech files, unified Phase 0, race-proof signals, `/redteam` |
+| **Basilisk v1.1.0** | **In Development** | Thin router + technique library, 68 tech files, unified Phase 0, race-proof signals, `/redteam` |
 | Raven v1.2.0 | Planned | Akira Context Engine: persistent cross-engagement memory, automatic tech fingerprint learning, `cache-attacks`, `csp-bypass` |
 | Phantom v1.3.0 | Planned | `mobile` DAST integration, `burp-mcp` live traffic feed into session.json |
 | Leviathan v2.0.0 | Planned | Autonomous orchestration: Akira Brain spawns and coordinates skills without user `/commands`, trained doom-loop predictor, `postmap-recon` |
@@ -516,15 +516,16 @@ Open Claude Code, type `/plan-engagement target.com`.
 
 ## Contributing
 
-Technique files in `tech/` are ~80 lines and self-contained. Adding a new attack vector is a single file PR - no monolith editing.
+Technique files in `skills/*/tech/` are ~80 lines and self-contained. Adding a new attack vector is a single file PR - no monolith editing.
 
 Contribution targets with highest value:
-- New `tech/` files for emerging CVEs (within 30 days of public disclosure)
+- New `skills/*/tech/` files for emerging CVEs (within 30 days of public disclosure)
 - Doom loop predictor training data (sanitized engagement exports)
 - WAF bypass success rate data for the bandit model
 - Platform adapters for new AI coding environments
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).
+For release criteria, adapter compatibility, and changelog process, see [docs/release/README.md](docs/release/README.md).
 
 ---
 

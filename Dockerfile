@@ -5,6 +5,13 @@
 # ─────────────────────────────────────────────────────────────────────────────
 FROM kalilinux/kali-rolling
 
+ARG GITLEAKS_VERSION=v8.24.2
+ARG TRUFFLEHOG_VERSION=v3.90.5
+ARG KERBRUTE_VERSION=v1.0.3
+ARG FEROXBUSTER_VERSION=v2.11.0
+ARG JADX_VERSION=v1.5.1
+ARG AZUREHOUND_VERSION=v2.3.4
+
 ENV DEBIAN_FRONTEND=noninteractive
 ENV GOROOT=/usr/local/go
 ENV GOPATH=/root/go
@@ -215,29 +222,23 @@ RUN git clone --depth 1 https://github.com/blechschmidt/massdns.git /opt/massdns
 # ── Binary downloads ──────────────────────────────────────────────────────────
 
 # gitleaks
-RUN GITLEAKS_VER=$(curl -s https://api.github.com/repos/gitleaks/gitleaks/releases/latest \
-        | jq -r '.tag_name') && \
-    wget -q "https://github.com/gitleaks/gitleaks/releases/download/${GITLEAKS_VER}/gitleaks_${GITLEAKS_VER#v}_linux_x64.tar.gz" \
+RUN wget -q "https://github.com/gitleaks/gitleaks/releases/download/${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION#v}_linux_x64.tar.gz" \
         -O /tmp/gitleaks.tar.gz && \
     tar -xzf /tmp/gitleaks.tar.gz -C /usr/local/bin gitleaks && \
     rm /tmp/gitleaks.tar.gz
 
 # trufflehog
-RUN wget -q "https://github.com/trufflesecurity/trufflehog/releases/latest/download/trufflehog_linux_amd64.tar.gz" \
+RUN wget -q "https://github.com/trufflesecurity/trufflehog/releases/download/${TRUFFLEHOG_VERSION}/trufflehog_linux_amd64.tar.gz" \
         -O /tmp/trufflehog.tar.gz && \
     tar -xzf /tmp/trufflehog.tar.gz -C /usr/local/bin trufflehog && \
     rm /tmp/trufflehog.tar.gz
 
 # kerbrute
-RUN KERBRUTE_VER=$(curl -s https://api.github.com/repos/ropnop/kerbrute/releases/latest \
-        | jq -r '.tag_name') && \
-    wget -q "https://github.com/ropnop/kerbrute/releases/download/${KERBRUTE_VER}/kerbrute_linux_amd64" \
+RUN wget -q "https://github.com/ropnop/kerbrute/releases/download/${KERBRUTE_VERSION}/kerbrute_linux_amd64" \
         -O /usr/local/bin/kerbrute && chmod +x /usr/local/bin/kerbrute
 
 # feroxbuster (latest binary)
-RUN FEROX_VER=$(curl -s https://api.github.com/repos/epi052/feroxbuster/releases/latest \
-        | jq -r '.tag_name') && \
-    wget -q "https://github.com/epi052/feroxbuster/releases/download/${FEROX_VER}/x86_64-linux-feroxbuster.zip" \
+RUN wget -q "https://github.com/epi052/feroxbuster/releases/download/${FEROXBUSTER_VERSION}/x86_64-linux-feroxbuster.zip" \
         -O /tmp/ferox.zip && \
     unzip -q /tmp/ferox.zip -d /usr/local/bin && chmod +x /usr/local/bin/feroxbuster && \
     rm /tmp/ferox.zip
@@ -249,9 +250,7 @@ RUN wget -q "https://github.com/frohoff/ysoserial/releases/latest/download/ysose
     chmod +x /usr/local/bin/ysoserial
 
 # jadx - Android APK decompiler
-RUN JADX_VER=$(curl -s https://api.github.com/repos/skylot/jadx/releases/latest \
-        | jq -r '.tag_name') && \
-    wget -q "https://github.com/skylot/jadx/releases/download/${JADX_VER}/jadx-${JADX_VER#v}.zip" \
+RUN wget -q "https://github.com/skylot/jadx/releases/download/${JADX_VERSION}/jadx-${JADX_VERSION#v}.zip" \
         -O /tmp/jadx.zip && \
     unzip -q /tmp/jadx.zip -d /opt/jadx && \
     ln -sf /opt/jadx/bin/jadx /usr/local/bin/jadx && \
@@ -325,9 +324,7 @@ RUN curl -sLO "https://dl.k8s.io/release/$(curl -sL https://dl.k8s.io/release/st
     chmod +x kubectl && mv kubectl /usr/local/bin/
 
 # AzureHound - Azure AD data collector
-RUN AZHOUND_VER=$(curl -s https://api.github.com/repos/BloodHoundAD/AzureHound/releases/latest \
-        | jq -r '.tag_name') && \
-    wget -q "https://github.com/BloodHoundAD/AzureHound/releases/download/${AZHOUND_VER}/azurehound-linux-amd64.zip" \
+RUN wget -q "https://github.com/BloodHoundAD/AzureHound/releases/download/${AZUREHOUND_VERSION}/azurehound-linux-amd64.zip" \
         -O /tmp/azurehound.zip && \
     unzip -q /tmp/azurehound.zip -d /usr/local/bin && \
     chmod +x /usr/local/bin/azurehound-linux-amd64 && \

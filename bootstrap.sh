@@ -5,6 +5,9 @@
 
 set -e
 
+VERSIONS_FILE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/toolchain/versions.env"
+[ -f "$VERSIONS_FILE" ] && source "$VERSIONS_FILE"
+
 echo ""
 echo "  Akira Bootstrap - Installing Toolchain"
 echo "  ======================================="
@@ -37,14 +40,14 @@ echo "  Go: $(go version | awk '{print $3}')"
 
 # Go-based tools (ProjectDiscovery + others)
 declare -A go_tools=(
-    ["subfinder"]="github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest"
-    ["httpx"]="github.com/projectdiscovery/httpx/cmd/httpx@latest"
-    ["dnsx"]="github.com/projectdiscovery/dnsx/cmd/dnsx@latest"
-    ["nuclei"]="github.com/projectdiscovery/nuclei/v3/cmd/nuclei@latest"
-    ["katana"]="github.com/projectdiscovery/katana/cmd/katana@latest"
-    ["gau"]="github.com/lc/gau/v2/cmd/gau@latest"
-    ["ffuf"]="github.com/ffuf/ffuf/v2@latest"
-    ["dalfox"]="github.com/hahwul/dalfox/v2@latest"
+    ["subfinder"]="github.com/projectdiscovery/subfinder/v2/cmd/subfinder@${SUBFINDER_VERSION:-v2.6.8}"
+    ["httpx"]="github.com/projectdiscovery/httpx/cmd/httpx@${HTTPX_VERSION:-v1.6.8}"
+    ["dnsx"]="github.com/projectdiscovery/dnsx/cmd/dnsx@${DNSX_VERSION:-v1.2.1}"
+    ["nuclei"]="github.com/projectdiscovery/nuclei/v3/cmd/nuclei@${NUCLEI_VERSION:-v3.3.2}"
+    ["katana"]="github.com/projectdiscovery/katana/cmd/katana@${KATANA_VERSION:-v1.1.1}"
+    ["gau"]="github.com/lc/gau/v2/cmd/gau@${GAU_VERSION:-v2.2.4}"
+    ["ffuf"]="github.com/ffuf/ffuf/v2@${FFUF_VERSION:-v2.1.0}"
+    ["dalfox"]="github.com/hahwul/dalfox/v2@${DALFOX_VERSION:-v2.12.0}"
     ["feroxbuster"]=""
 )
 
@@ -112,5 +115,6 @@ for tool in subfinder httpx dnsx nuclei katana ffuf dalfox feroxbuster nmap sqlm
     fi
 done
 echo ""
+echo "  Version source: toolchain/versions.env"
 echo "  Start your first engagement: /plan-engagement <target>"
 echo ""

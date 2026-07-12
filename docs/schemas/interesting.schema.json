@@ -1,0 +1,9 @@
+{
+  "required_sections": [
+    "## Summary",
+    "## Confirmed Findings",
+    "## Potential Findings",
+    "## Evidence Snippets",
+    "## Next Actions"
+  ]
+}

@@ -3,18 +3,18 @@
 ## Quick Install (30 seconds)
 
 ```bash
-git clone https://github.com/Kalp1774/akira
+git clone https://github.com/kalpmodi/akira
 cd akira && bash install.sh
 ```
 
-That installs all 13 skills into `~/.claude/skills/`. Open Claude Code and you're ready.
+That installs all available skills into `~/.claude/skills/`. Open Claude Code and you're ready.
 
 ---
 
 ## Full Install (with tools)
 
 ```bash
-git clone https://github.com/Kalp1774/akira
+git clone https://github.com/kalpmodi/akira
 cd akira
 bash install.sh      # install skills
 bash bootstrap.sh    # install nuclei, dalfox, subfinder, httpx, sqlmap, etc.
@@ -130,3 +130,5 @@ bash install.sh
 ```
 
 Skills are overwritten with the latest version.
+
+For reproducible toolchain versions, see `toolchain/versions.env`.

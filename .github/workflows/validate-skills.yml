@@ -11,10 +11,15 @@ on:
 jobs:
   validate:
     runs-on: ubuntu-latest
-    name: Validate skill file structure
+    name: Validate skills and docs quality
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
 
       - name: Check all skills have SKILL.md
         run: |
@@ -66,3 +71,7 @@ jobs:
         run: |
           COUNT=$(ls -d skills/*/ | wc -l | tr -d ' ')
           echo "Total skills: $COUNT"
+
+      - name: Validate artifact schemas, command blocks, and links
+        run: |
+          python3 .github/scripts/validate_repo_quality.py

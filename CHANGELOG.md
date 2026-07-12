@@ -83,9 +83,11 @@ Like the mythological hydra, each skill operates independently but feeds the sam
 
 ---
 
-## Upcoming
+## Upcoming (Planned / In Development)
 
-### [Basilisk - v1.1.0] - May 2026
+Release criteria, adapter compatibility, and changelog automation process are tracked in `docs/release/README.md`.
+
+### [Basilisk - v1.1.0] - In Development
 
 *Kills through indirect contact. Supply chain, deserialization, prototype pollution.*
 
@@ -97,7 +99,7 @@ The basilisk doesn't need to strike directly - it kills through its gaze. This r
 - `supply-chain` - dependency confusion, typosquatting, namespace squatting
 - `ci-cd-audit` - 9 GitHub Actions attack vectors
 
-### [Raven - v1.2.0] - June 2026
+### [Raven - v1.2.0] - Planned
 
 *Legendary memory. Dark perception. Intelligence that accumulates.*
 
@@ -107,7 +109,7 @@ Ravens are known for long memory and pattern recognition. This release gives Aki
 - `cache-attacks` - poisoning + deception unified playbook
 - `csp-bypass` - JSONP, nonce reuse, base-URI injection
 
-### [Phantom - v1.3.0] - July 2026
+### [Phantom - v1.3.0] - Planned
 
 *Slips through defenses. No trace. No certificate. No barrier.*
 
@@ -116,7 +118,7 @@ Mobile targets and Burp integration - expanding Akira's reach into surfaces that
 - `mobile` - Android APK, Firebase, iOS, Frida certificate pinning bypass
 - `burp-integration` - native Burp MCP tools (Repeater, Intruder, proxy history)
 
-### [Leviathan - v2.0.0] - September 2026
+### [Leviathan - v2.0.0] - Planned
 
 *Ancient. Massive. Unchained. Remembers everything.*
 

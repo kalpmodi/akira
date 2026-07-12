@@ -1,0 +1,47 @@
+{
+  "type": "object",
+  "required": [
+    "target",
+    "engagement_state",
+    "active_chain",
+    "intel",
+    "hypotheses",
+    "report_draft",
+    "intel_relay",
+    "scalpel"
+  ],
+  "properties": {
+    "target": { "type": "string" },
+    "engagement_state": { "type": "string" },
+    "active_chain": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "intel": { "type": "object" },
+    "hypotheses": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "label", "probability", "status"],
+        "properties": {
+          "id": { "type": "string" },
+          "label": { "type": "string" },
+          "probability": { "type": "number" },
+          "status": { "type": "string" }
+        }
+      }
+    },
+    "report_draft": {
+      "type": "object",
+      "required": ["findings"],
+      "properties": {
+        "findings": {
+          "type": "array",
+          "items": { "type": "object" }
+        }
+      }
+    },
+    "intel_relay": { "type": "object" },
+    "scalpel": { "type": "object" }
+  }
+}

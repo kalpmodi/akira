@@ -1,0 +1,40 @@
+{
+  "target": "example.com",
+  "engagement_state": "WIDE",
+  "active_chain": [
+    "plan-engagement",
+    "recon",
+    "secrets",
+    "exploit",
+    "zerodayhunt",
+    "triage",
+    "report"
+  ],
+  "intel": {
+    "technologies": ["nginx"],
+    "waf": "none"
+  },
+  "hypotheses": [
+    {
+      "id": "h1",
+      "label": "Potential SSRF via URL proxy endpoint",
+      "probability": 0.55,
+      "status": "active"
+    }
+  ],
+  "report_draft": {
+    "findings": []
+  },
+  "intel_relay": {
+    "from_recon": {},
+    "from_secrets": {},
+    "from_exploit": {}
+  },
+  "scalpel": {
+    "active_manifest": {
+      "phase": "recon",
+      "generated_at": "2026-07-12 00:00",
+      "items": []
+    }
+  }
+}
